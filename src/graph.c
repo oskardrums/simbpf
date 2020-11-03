@@ -44,3 +44,24 @@ struct vertex_s * graph_vertex(struct graph_s * g, void * weight)
     tail->next->next = NULL;
     return tail->next;
 }
+
+
+struct edge_s * graph_edge(struct graph_s * g, void * weight, struct vertex_s * src, struct vertex_s * dst) 
+{
+    struct edge_s * temp = NULL;
+    struct edge_s * tail = g->e;
+    while (temp = tail->next) {
+        tail = temp;
+    }
+    tail->next = (typeof(tail->next))malloc(sizeof(*tail->next));
+    if (tail->next == NULL) {
+        perror("malloc");
+        return NULL;
+    }
+    memset(tail->next, 0, sizeof(*tail->next));
+    tail->next->weight = weight;
+    tail->next->src = src;
+    tail->next->dst = dst;
+    tail->next->next = NULL;
+    return tail->next;
+}
