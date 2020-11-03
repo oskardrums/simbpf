@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "graph.h"
@@ -6,6 +7,7 @@ int main() {
     struct graph_s * g = graph_create();
     struct vertex_s * v1 = NULL, * v2 = NULL;
     struct edge_s * e1 = NULL;
+    struct edge_s * e2 = NULL;
     if (g == NULL) {
         perror("graph_create");
         return -1;
@@ -28,5 +30,14 @@ int main() {
         perror("graph_edge");
         return -4;
     }
+
+    e2 = graph_edges_from_to(g,v1, v2);
+    if (e2 == NULL) {
+        perror("graph_edge");
+        return -5;
+    }
+
+    assert(e1 == e2);
+
     return 0;
 }
