@@ -1,0 +1,46 @@
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include "graph.h"
+
+struct graph_s * graph_create()
+{
+    struct graph_s * g = (typeof(g))malloc(sizeof(*g));
+    if (g == NULL) {
+        perror("malloc");
+        return NULL;
+    }
+    memset(g, 0, sizeof(*g));
+    g->v = (typeof(g->v))malloc(sizeof(*g->v));
+    if (g->v == NULL) {
+        perror("malloc");
+        free(g);
+        return NULL;
+    }
+    g->e = (typeof(g->e))malloc(sizeof(*g->e));
+    if (g->e == NULL) {
+        perror("malloc");
+        free(g);
+        return NULL;
+    }
+    return g;
+}
+
+
+struct vertex_s * graph_vertex(struct graph_s * g, void * weight) 
+{
+    struct vertex_s * temp = NULL;
+    struct vertex_s * tail = g->v;
+    while (temp = tail->next) {
+        tail = temp;
+    }
+    tail->next = (typeof(tail->next))malloc(sizeof(*tail->next));
+    if (tail->next == NULL) {
+        perror("malloc");
+        return NULL;
+    }
+    memset(tail->next, 0, sizeof(*tail->next));
+    tail->next->weight = weight;
+    tail->next->next = NULL;
+    return tail->next;
+}
