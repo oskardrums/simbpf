@@ -17,9 +17,13 @@ struct bpf_cc_s {
 
 struct bpf_baton_s
 {
-    size_t length;
+    size_t addr;
+    size_t len;
     struct bpf_insn insns[];
 };
 
 struct bpf_cc_s * bpf_compile_graph(struct graph_s * g, struct vertex_s * entry) __attribute__((nonnull(1,2)));
+
+void bpf_cc_dump(struct bpf_cc_s *);
+
 #endif
