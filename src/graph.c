@@ -11,18 +11,23 @@ struct graph_s * graph_create()
         return NULL;
     }
     memset(g, 0, sizeof(*g));
+
     g->v = (typeof(g->v))malloc(sizeof(*g->v));
     if (g->v == NULL) {
         perror("malloc");
         free(g);
         return NULL;
     }
+    memset(g->v, 0, sizeof(*g->v));
+
     g->e = (typeof(g->e))malloc(sizeof(*g->e));
     if (g->e == NULL) {
         perror("malloc");
         free(g);
         return NULL;
     }
+    memset(g->e, 0, sizeof(*g->e));
+
     return g;
 }
 
@@ -87,4 +92,24 @@ struct edge_s * graph_edges_from_to(struct graph_s * g, struct vertex_s * src, s
     }
 
     return NULL;
+}
+
+void graph_destroy(struct graph_s * g)
+{
+    struct edge_s * e = NULL;
+    struct vertex_s * v = NULL;
+
+    while (e = g->e->next) {
+        g->e->next = e->next;
+        free(e);
+    }
+    free(g->e);
+
+    while (v = g->v->next) {
+        g->v->next = v->next;
+        free(v);
+    }
+    free(g->v);
+
+    free(g);
 }

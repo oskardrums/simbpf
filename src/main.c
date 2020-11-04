@@ -39,5 +39,7 @@ int main() {
 
     assert(e1 == e2);
 
+    graph_destroy(g);
+
     return 0;
 }
