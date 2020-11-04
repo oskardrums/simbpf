@@ -16,7 +16,7 @@ int main()
     struct edge_s * e4 = NULL;
     struct edge_s * e5 = NULL;
 
-    struct bpf_insn_baton * baton = (typeof(baton))malloc(sizeof(*baton) + sizeof(baton->insns[0]) * 1);
+    struct bpf_baton_s * baton = (typeof(baton))malloc(sizeof(*baton) + sizeof(baton->insns[0]) * 1);
     if (baton == NULL) {
         perror("malloc");
         return 1;
@@ -72,9 +72,8 @@ int main()
     assert(e5 == NULL);
 
 
-    struct bpf_insn * result = NULL;
-    int i = bpf_compile_graph(g, v1, &result);
-    printf("%d %p\n", i, result);
+    struct bpf_cc_s * result = bpf_compile_graph(g, v1);
+    printf("%p\n", result);
 
     graph_destroy(g);
 

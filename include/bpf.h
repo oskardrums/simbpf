@@ -7,11 +7,19 @@
 #include "bpf_insn.h"
 #include "graph.h"
 
-struct bpf_insn_baton
+#define INITIAL_CAPACITY 1024
+
+struct bpf_cc_s {
+    size_t current;
+    size_t capacity;
+    struct bpf_insn insns[];
+};
+
+struct bpf_baton_s
 {
     size_t length;
     struct bpf_insn insns[];
 };
 
-int bpf_compile_graph(struct graph_s * g, struct vertex_s * entry, struct bpf_insn ** output) __attribute__((nonnull(1,2)));
+struct bpf_cc_s * bpf_compile_graph(struct graph_s * g, struct vertex_s * entry) __attribute__((nonnull(1,2)));
 #endif

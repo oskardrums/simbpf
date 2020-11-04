@@ -3,34 +3,44 @@
 #include <string.h>
 #include "bpf.h"
 
-int bpf_compile_graph(struct graph_s * g, struct vertex_s * entry, struct bpf_insn ** output)
+struct bpf_cc_s * bpf__append(struct bpf_cc_s * cc, struct bpf_baton_s * baton)
 {
-    struct bpf_insn_baton * baton = NULL;
-    size_t current = 0;
-    size_t capacity = 1024;
-    struct bpf_insn * result = NULL;
-
-    baton = (typeof(baton))entry->weight;
-
-    while (baton->length > capacity - current) capacity <<= 1;
-    result = (typeof(result))calloc(sizeof(*result), capacity);
-    if (result == NULL) {
-        perror("malloc");
-        return -1;
+    size_t capacity = cc->capacity;
+    if (baton != NULL) {
+        while (baton->length > (cc->capacity - cc->current)) capacity <<= 1;
+        if (capacity > cc->capacity) {
+            cc = (typeof(cc))realloc(cc, sizeof(*cc) + sizeof(cc->insns[0]) * capacity);
+            if (cc == NULL) {
+                perror("realloc");
+                return NULL;
+            }
+        }
+        memcpy(&(cc->insns[cc->current]), baton->insns, baton->length*sizeof(baton->insns[0]));
+        cc->current += baton->length;
     }
+    return cc;
+}
 
-    memcpy(result, baton->insns, baton->length*sizeof(baton->insns[0]));
-    current += baton->length;
+struct bpf_cc_s * bpf_compile_graph(struct graph_s * g, struct vertex_s * entry)
+{
+    struct bpf_cc_s * cc = (typeof(cc))malloc(sizeof(*cc) + sizeof(cc->insns[0]) * INITIAL_CAPACITY);
+    if (cc == NULL) {
+        perror("malloc");
+        return NULL;
+    }
+    memset(cc, 0, sizeof(*cc) + sizeof(cc->insns[0]) * INITIAL_CAPACITY);
+    cc->capacity = INITIAL_CAPACITY;
+
+    cc = bpf__append(cc, entry->weight);
+    if (cc == NULL) {
+        perror("append");
+        return NULL;
+    }
 
     struct edge_s * e = NULL;
     for (e = graph_edges_from(g, entry); e != NULL; e = graph_edges_from_r(g, entry, e)) {
         printf("%p %p %p %p\n", entry, e, e->src, e->next);
     }
 
-
-    if (output != NULL) {
-        *output = result;
-    }
-
-    return current;
+    return cc;
 }
