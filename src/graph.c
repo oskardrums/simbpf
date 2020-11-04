@@ -71,27 +71,23 @@ struct edge_s * graph_edge(struct graph_s * g, void * weight, struct vertex_s * 
     return tail->next;
 }
 
-
 struct edge_s * graph_edges_from_to_r(struct graph_s * g, struct vertex_s * src, struct vertex_s * dst, struct edge_s * r)
 {
     (void)g;
-    (void)src;
-    (void)dst;
-    (void)r;
-    return NULL;
-}
-
-struct edge_s * graph_edges_from_to(struct graph_s * g, struct vertex_s * src, struct vertex_s * dst)
-{
     struct edge_s * temp = NULL;
 
-    for (temp = g->e; temp != NULL; temp = temp->next) {
+    for (temp = (r ? r->next : g->e); temp != NULL; temp = temp->next) {
         if (temp->src == src && temp->dst == dst) {
             return temp;
         }
     }
 
     return NULL;
+}
+
+struct edge_s * graph_edges_from_to(struct graph_s * g, struct vertex_s * src, struct vertex_s * dst)
+{
+    return graph_edges_from_to_r(g, src, dst, NULL);
 }
 
 void graph_destroy(struct graph_s * g)
