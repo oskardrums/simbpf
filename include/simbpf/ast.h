@@ -1,6 +1,10 @@
 #ifndef SIMBPF_AST_H
 #define SIMBPF_AST_H
+#include <stddef.h>
 
+enum sd_ast_type_e {
+    SB_AST_TYPE_ASSERT,
+};
 
 struct sb_ast_s {
     int type;

@@ -5,6 +5,16 @@
 #include <linux/filter.h>
 #include "simbpf.h"
 
+int test_ast() {
+    struct sb_ast_s * ast = sb_ast_create();
+    if (ast == NULL) {
+        return -1;
+    }
+    sb_ast_destroy(ast);
+    return 0;
+}
+
+
 int main()
 {
     struct graph_s * g = NULL;
@@ -101,6 +111,10 @@ int main()
     free(v2baton);
 
     graph_destroy(g);
+
+    if (test_ast() < 0) {
+        return -1;
+    }
 
     return 0;
 }

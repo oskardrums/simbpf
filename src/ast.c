@@ -1,4 +1,6 @@
 #include "simbpf/ast.h"
+#include <stdlib.h>
+#include <assert.h>
 
 struct sb_ast_s * sb_ast_create()
 {
@@ -18,17 +20,9 @@ struct sb_ast_s * sb_ast_set_type(struct sb_ast_s * ast, int type)
 struct sb_ast_s * sb_ast_assert_set_data(struct sb_ast_s * ast, size_t offset, size_t size, void * data)
 {
     assert(ast->type == SB_AST_TYPE_ASSERT);
-    ast->data.offset = offset;
-    ast->data.size = size;
-    ast->data.data = data;
-    return ast;
-}
-
-{
-    struct sb_ast_s * ast = (typeof(ast))malloc(sizeof(*ast));
-    if (ast == NULL) {
-        return NULL;
-    }
+    ast->data.ast_assert.offset = offset;
+    ast->data.ast_assert.size = size;
+    ast->data.ast_assert.data = data;
     return ast;
 }
 
