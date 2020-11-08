@@ -1,10 +1,10 @@
+#include "simbpf.h"
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <linux/filter.h>
 #include <net/ethernet.h>
-#include "simbpf.h"
 
 int test_ast() {
     struct sb_ast_s * ast = sb_ast_create();

@@ -1,6 +1,7 @@
 #ifndef SIMBPF_BPF_H
 #define SIMBPF_BPF_H
 
+#include <stddef.h>
 #include <linux/bpf.h>
 #include <linux/filter.h>
 
