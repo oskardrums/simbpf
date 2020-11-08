@@ -3,7 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <unistd.h>
 #include <net/ethernet.h>
+#include <bpf/bpf.h>
+#include <bpf/libbpf.h>
 
 int test_ast()
 {
@@ -13,6 +16,8 @@ int test_ast()
     struct sb_ast_s * func = NULL;
     struct sb_ast_s * assertion = NULL;
     struct sb_ast_s * ret = NULL;
+    int prog_fd = -1;
+    char buffer[4096];
 
     printf("test_ast: sb_ast_create(SB_AST_TYPE_RETURN)\n");
     ret = sb_ast_create(SB_AST_TYPE_RETURN);
@@ -68,6 +73,21 @@ int test_ast()
 
     sb_bpf_cc_dump(b);
 
+    printf("test_ast: bpf_load_program\n");
+    prog_fd = bpf_load_program(BPF_PROG_TYPE_XDP, b->insns, b->current, "GPL", 0, buffer, 4096);
+    if (prog_fd < 0) {
+        printf(buffer);
+        err = true;
+        goto cleanup;
+    }
+
+    printf("test_ast: bpf_set_link_xdp_fd\n");
+    if (bpf_set_link_xdp_fd(1, prog_fd, 0) < 0) {
+        err = true;
+        goto cleanup;
+    }
+
+
     free(b);
 
     printf("test_ast: sb_graph_destroy\n");
@@ -79,6 +99,10 @@ int test_ast()
 
 cleanup:
     if (err) {
+        if (prog_fd >= 0) {
+            close(prog_fd);
+        }
+        prog_fd = -1;
         return -1;
     }
     return 0;
