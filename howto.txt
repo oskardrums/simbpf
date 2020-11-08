@@ -1,1 +1,0 @@
-gcc -Wall -Wextra -Werror -Wno-parentheses -Iinclude -flto -Os src/main.c src/graph.c

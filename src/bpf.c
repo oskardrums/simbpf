@@ -23,6 +23,7 @@ struct sb_bpf_cc_s * sb_bpf__concat(struct sb_bpf_cc_s * cc, struct sb_bpf_cc_s 
 
 struct sb_bpf_cc_s * sb_bpf__append(struct sb_bpf_cc_s * cc, struct sb_bpf_baton_s * baton)
 {
+    printf("now code=%u\n", baton->insns[0].code);
     size_t capacity = cc->capacity;
     if (baton != NULL) {
         printf("hea %lu\n", baton->len);
@@ -36,6 +37,9 @@ struct sb_bpf_cc_s * sb_bpf__append(struct sb_bpf_cc_s * cc, struct sb_bpf_baton
             }
         }
         memcpy(&(cc->insns[cc->current]), baton->insns, baton->len*sizeof(baton->insns[0]));
+        struct bpf_insn o = cc->insns[cc->current];
+        printf("appended: 0x%02x, %u, %u, %d, %d\n", o.code, o.dst_reg, o.src_reg, o.off, o.imm);
+
         cc->current += baton->len;
     }
     return cc;
@@ -45,8 +49,8 @@ struct sb_bpf_cc_s * sb_bpf__append(struct sb_bpf_cc_s * cc, struct sb_bpf_baton
 void sb_bpf_cc_dump(struct sb_bpf_cc_s * cc) {
     printf("%lu/%lu\n", cc->current, cc->capacity);
     for (size_t i = 0; i < cc->current; i++) {
-        struct bpf_insn * o = &cc->insns[cc->current];
-        printf("0x%02x, %u, %u, %d, %d\n", o->code, o->dst_reg, o->src_reg, o->off, o->imm);
+        struct bpf_insn o = cc->insns[i];
+        printf("0x%02x, %u, %u, %d, %d\n", o.code, o.dst_reg, o.src_reg, o.off, o.imm);
     }
 }
 
