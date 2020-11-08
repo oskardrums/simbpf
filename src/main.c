@@ -3,10 +3,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <linux/filter.h>
+#include <net/ethernet.h>
 #include "simbpf.h"
 
 int test_ast() {
     struct sb_ast_s * ast = sb_ast_create();
+    if (ast == NULL) {
+        return -1;
+    }
+    ast = sb_ast_set_type(ast, SB_AST_TYPE_ASSERT);
+    if (ast == NULL) {
+        return -1;
+    }
+    unsigned short eth_p = ETH_P_ARP;
+    ast = sb_ast_assert_set_data(ast, 12, 2, &eth_p);
     if (ast == NULL) {
         return -1;
     }

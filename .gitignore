@@ -15,7 +15,12 @@ include/config.h.in
 include/config.h.in~
 include/stamp-h1
 install-sh
+test-driver
 missing
-src/.deps/
+.deps
+test-suite.log
+test_simbpf
+test_simbpf.log
+test_simbpf.trs
 *.o
 src/simbpf

@@ -23,6 +23,7 @@ AC_CHECK_FUNCS([memset])
 AC_CONFIG_FILES([
  Makefile
  src/Makefile
+ tst/Makefile
 ])
 
 AC_OUTPUT
