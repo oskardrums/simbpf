@@ -85,10 +85,25 @@ struct sb_vertex_s * sb_ast__compile_recurse(struct sb_ast_s * ast, struct sb_gr
 struct sb_graph_s * sb_ast_compile(struct sb_ast_s * ast) {
     struct sb_vertex_s * ret = NULL;
     struct sb_bpf_baton_s * ret_baton = NULL;
+    struct sb_vertex_s * body = NULL;
+    struct sb_edge_s * ent_to_body_edge = NULL;
+    struct sb_bpf_baton_s * ent_to_body_edge_baton = NULL;
+    struct sb_vertex_s * ent = NULL;
+    struct sb_bpf_baton_s * ent_baton = NULL;
     struct sb_graph_s * g = sb_graph_create();
+
     if (g == NULL) {
         return NULL;
     }
+
+    ent_baton = sb_bpf_baton_create(1);
+    if (ent_baton == NULL) {
+        sb_graph_destroy(g);
+        return NULL;
+    }
+    ent_baton->insns[0] = BPF_MOV64_REG(BPF_REG_6, BPF_REG_1);
+    ent = sb_graph_vertex(g, ent_baton);
+
     ret_baton = sb_bpf_baton_create(1);
     if (ret_baton == NULL) {
         sb_graph_destroy(g);
@@ -97,7 +112,14 @@ struct sb_graph_s * sb_ast_compile(struct sb_ast_s * ast) {
     ret_baton->insns[0] = BPF_EXIT_INSN();
     ret = sb_graph_vertex(g, ret_baton);
 
-    sb_ast__compile_recurse(ast, g, ret);
+    ent_to_body_edge_baton = sb_bpf_baton_create(1);
+    if (ent_to_body_edge_baton == NULL) {
+        sb_graph_destroy(g);
+        return NULL;
+    }
+    ent_to_body_edge_baton->insns[0] = BPF_JMP_A(0);
+    ent_to_body_edge = sb_graph_vertex(g, ent_to_body_edge_baton);
+    body = sb_ast__compile_recurse(ast, g, ret);
     
     return g;
 }

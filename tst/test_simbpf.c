@@ -31,7 +31,7 @@ int test_ast()
     }
 
     printf("test_ast: sb_graph_compile\n");
-    b = sb_graph_compile(g);
+    b = sb_graph_compile(g, g->v);
     if (b == NULL) {
         return -1;
     }
