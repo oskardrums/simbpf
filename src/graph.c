@@ -147,7 +147,6 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
     }
 
     for (e = sb_graph_edges_from(g, entry); e != NULL; e = sb_graph_edges_from_r(g, entry, e)) {
-        printf("loop1\n");
         struct sb_bpf_baton_s * dst_baton = e->dst->weight;
         struct sb_bpf_baton_s * e_baton = e->weight;
 
@@ -165,7 +164,6 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
     }
 
     for (e = sb_graph_edges_from(g, entry); e != NULL; e = sb_graph_edges_from_r(g, entry, e)) {
-        printf("loop2\n");
         struct sb_bpf_cc_s * sub_cc = NULL;
         struct sb_bpf_baton_s * e_baton = e->weight;
         struct sb_bpf_baton_s * src_baton = e->src->weight;

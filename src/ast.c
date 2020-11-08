@@ -112,14 +112,24 @@ struct sb_graph_s * sb_ast_compile(struct sb_ast_s * ast) {
     ret_baton->insns[0] = BPF_EXIT_INSN();
     ret = sb_graph_vertex(g, ret_baton);
 
+    body = sb_ast__compile_recurse(ast, g, ret);
+    if (body == NULL) {
+        sb_graph_destroy(g);
+        return NULL;
+    }
+
     ent_to_body_edge_baton = sb_bpf_baton_create(1);
     if (ent_to_body_edge_baton == NULL) {
         sb_graph_destroy(g);
         return NULL;
     }
     ent_to_body_edge_baton->insns[0] = BPF_JMP_A(0);
-    ent_to_body_edge = sb_graph_vertex(g, ent_to_body_edge_baton);
-    body = sb_ast__compile_recurse(ast, g, ret);
-    
+
+    ent_to_body_edge = sb_graph_edge(g, ent_to_body_edge_baton, ent, body);
+    if (ent_to_body_edge == NULL) {
+        sb_graph_destroy(g);
+        return NULL;
+    }
+
     return g;
 }
