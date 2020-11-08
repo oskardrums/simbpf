@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include "simbpf/graph.h"
 
-struct graph_s * graph_create()
+struct sb_graph_s * sb_graph_create()
 {
-    struct graph_s * g = (typeof(g))malloc(sizeof(*g));
+    struct sb_graph_s * g = (typeof(g))malloc(sizeof(*g));
     if (g == NULL) {
         perror("malloc");
         return NULL;
@@ -32,10 +32,10 @@ struct graph_s * graph_create()
 }
 
 
-struct vertex_s * graph_vertex(struct graph_s * g, void * weight) 
+struct sb_vertex_s * sb_graph_vertex(struct sb_graph_s * g, void * weight) 
 {
-    struct vertex_s * temp = NULL;
-    struct vertex_s * tail = g->v;
+    struct sb_vertex_s * temp = NULL;
+    struct sb_vertex_s * tail = g->v;
     while (temp = tail->next) {
         tail = temp;
     }
@@ -51,10 +51,10 @@ struct vertex_s * graph_vertex(struct graph_s * g, void * weight)
 }
 
 
-struct edge_s * graph_edge(struct graph_s * g, void * weight, struct vertex_s * src, struct vertex_s * dst) 
+struct sb_edge_s * sb_graph_edge(struct sb_graph_s * g, void * weight, struct sb_vertex_s * src, struct sb_vertex_s * dst) 
 {
-    struct edge_s * temp = NULL;
-    struct edge_s * tail = g->e;
+    struct sb_edge_s * temp = NULL;
+    struct sb_edge_s * tail = g->e;
     while (temp = tail->next) {
         tail = temp;
     }
@@ -71,9 +71,9 @@ struct edge_s * graph_edge(struct graph_s * g, void * weight, struct vertex_s * 
     return tail->next;
 }
 
-struct edge_s * graph_edges_from_to_r(struct graph_s * g, struct vertex_s * src, struct vertex_s * dst, struct edge_s * r)
+struct sb_edge_s * sb_graph_edges_from_to_r(struct sb_graph_s * g, struct sb_vertex_s * src, struct sb_vertex_s * dst, struct sb_edge_s * r)
 {
-    struct edge_s * temp = NULL;
+    struct sb_edge_s * temp = NULL;
 
     for (temp = (r ? r->next : g->e); temp != NULL; temp = temp->next) {
         if (temp->src == src && temp->dst == dst) {
@@ -84,14 +84,14 @@ struct edge_s * graph_edges_from_to_r(struct graph_s * g, struct vertex_s * src,
     return NULL;
 }
 
-struct edge_s * graph_edges_from_to(struct graph_s * g, struct vertex_s * src, struct vertex_s * dst)
+struct sb_edge_s * sb_graph_edges_from_to(struct sb_graph_s * g, struct sb_vertex_s * src, struct sb_vertex_s * dst)
 {
-    return graph_edges_from_to_r(g, src, dst, NULL);
+    return sb_graph_edges_from_to_r(g, src, dst, NULL);
 }
 
-struct edge_s * graph_edges_from_r(struct graph_s * g, struct vertex_s * src, struct edge_s * r)
+struct sb_edge_s * sb_graph_edges_from_r(struct sb_graph_s * g, struct sb_vertex_s * src, struct sb_edge_s * r)
 {
-    struct edge_s * temp = NULL;
+    struct sb_edge_s * temp = NULL;
 
     for (temp = (r ? r->next : g->e); temp != NULL; temp = temp->next) {
         if (temp->src == src) {
@@ -102,15 +102,15 @@ struct edge_s * graph_edges_from_r(struct graph_s * g, struct vertex_s * src, st
     return NULL;
 }
 
-struct edge_s * graph_edges_from(struct graph_s * g, struct vertex_s * src)
+struct sb_edge_s * sb_graph_edges_from(struct sb_graph_s * g, struct sb_vertex_s * src)
 {
-    return graph_edges_from_r(g, src, NULL);
+    return sb_graph_edges_from_r(g, src, NULL);
 }
 
-void graph_destroy(struct graph_s * g)
+void sb_graph_destroy(struct sb_graph_s * g)
 {
-    struct edge_s * e = NULL;
-    struct vertex_s * v = NULL;
+    struct sb_edge_s * e = NULL;
+    struct sb_vertex_s * v = NULL;
 
     while (e = g->e->next) {
         g->e->next = e->next;
