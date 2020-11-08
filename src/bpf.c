@@ -23,12 +23,9 @@ struct sb_bpf_cc_s * sb_bpf__concat(struct sb_bpf_cc_s * cc, struct sb_bpf_cc_s 
 
 struct sb_bpf_cc_s * sb_bpf__append(struct sb_bpf_cc_s * cc, struct sb_bpf_baton_s * baton)
 {
-    printf("now code=%u\n", baton->insns[0].code);
     size_t capacity = cc->capacity;
     if (baton != NULL) {
-        printf("hea %lu\n", baton->len);
         while (baton->len > (cc->capacity - cc->current)) capacity <<= 1;
-        printf("here %lu %lu\n", capacity, cc->capacity);
         if (capacity > cc->capacity) {
             cc = (typeof(cc))realloc(cc, sizeof(*cc) + sizeof(cc->insns[0]) * capacity);
             if (cc == NULL) {
@@ -37,9 +34,6 @@ struct sb_bpf_cc_s * sb_bpf__append(struct sb_bpf_cc_s * cc, struct sb_bpf_baton
             }
         }
         memcpy(&(cc->insns[cc->current]), baton->insns, baton->len*sizeof(baton->insns[0]));
-        struct bpf_insn o = cc->insns[cc->current];
-        printf("appended: 0x%02x, %u, %u, %d, %d\n", o.code, o.dst_reg, o.src_reg, o.off, o.imm);
-
         cc->current += baton->len;
     }
     return cc;
@@ -55,7 +49,6 @@ void sb_bpf_cc_dump(struct sb_bpf_cc_s * cc) {
 }
 
 struct sb_bpf_baton_s * sb_bpf_baton_create(size_t len) {
-    printf("oing this %lu\n", len);
     struct sb_bpf_baton_s * baton = (typeof(baton))malloc(sizeof(*baton) + sizeof(baton->insns[0]) * len);
     if (baton != NULL) {
         memset(baton, 0, sizeof(*baton) + sizeof(baton->insns[0]) * len);

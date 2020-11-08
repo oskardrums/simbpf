@@ -1,6 +1,7 @@
 #include "simbpf.h"
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <net/ethernet.h>
 
@@ -52,6 +53,8 @@ int test_ast()
     }
 
     sb_bpf_cc_dump(b);
+
+    free(b);
 
     printf("test_ast: sb_graph_destroy\n");
     sb_graph_destroy(g);

@@ -139,14 +139,12 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
     memset(cc, 0, sizeof(*cc) + sizeof(cc->insns[0]) * SB_GRAPH_INITIAL_CAPACITY);
     cc->capacity = SB_GRAPH_INITIAL_CAPACITY;
 
-    printf("code=%u\n", entry_baton->insns[0].code);
     entry_baton->addr = cc->current;
     cc = sb_bpf__append(cc, entry_baton);
     if (cc == NULL) {
         perror("append");
         return NULL;
     }
-    printf("now now code=%u\n", cc->insns[0].code);
 
     for (e = sb_graph_edges_from(g, entry); e != NULL; e = sb_graph_edges_from_r(g, entry, e)) {
         struct sb_bpf_baton_s * dst_baton = e->dst->weight;
@@ -165,7 +163,6 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
         }
     }
 
-    printf("now now 2code=%u\n", cc->insns[0].code);
     for (e = sb_graph_edges_from(g, entry); e != NULL; e = sb_graph_edges_from_r(g, entry, e)) {
         struct sb_bpf_cc_s * sub_cc = NULL;
         struct sb_bpf_baton_s * e_baton = e->weight;
@@ -187,7 +184,6 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
         }
     }
 
-    printf("now now3 code=%u\n", cc->insns[0].code);
     return cc;
 }
 

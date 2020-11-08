@@ -1,5 +1,6 @@
 #include "simbpf/ast.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <assert.h>
 
@@ -99,6 +100,7 @@ struct sb_vertex_s * sb_ast__emit_function(struct sb_ast_s * ast, struct sb_grap
 
     return prolog;
 }
+
 struct sb_vertex_s * sb_ast__emit_assert(struct sb_ast_s * ast, struct sb_graph_s * g, struct sb_vertex_s * ret)
 {
     bool err = false;
@@ -112,40 +114,43 @@ struct sb_vertex_s * sb_ast__emit_assert(struct sb_ast_s * ast, struct sb_graph_
     
     if ((load_baton = sb_bpf_baton_create(1)) == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
     load_baton->insns[0] = BPF_LD_ABS(ast->data.ast_assert.size, ast->data.ast_assert.offset);
 
     if ((load = sb_graph_vertex(g, load_baton)) == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
     if ((load_to_ret_baton = sb_bpf_baton_create(1)) == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
     load_to_ret_baton->insns[0] = BPF_JMP_IMM(BPF_JNE, BPF_REG_0, ast->data.ast_assert.value, 0);
 
     if ((load_to_ret = sb_graph_edge(g, load_to_ret_baton, load, ret)) == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
-    if ((tail = sb_ast__compile_recurse(ast->data.ast_assert.tail, g, ret)) == NULL) {
-        err = true;
-        goto cleanup;
-    }
+    if ((tail = sb_ast__compile_recurse(ast->data.ast_assert.tail, g, ret)) != NULL) {
+        if ((load_to_tail_baton = sb_bpf_baton_create(1)) == NULL) {
+            err = true;
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            goto cleanup;
+        }
+        load_to_tail_baton->insns[0] = BPF_JMP_A(0);
 
-    if ((load_to_tail_baton = sb_bpf_baton_create(1)) == NULL) {
-        err = true;
-        goto cleanup;
-    }
-    load_to_tail_baton->insns[0] = BPF_JMP_A(0);
-
-    if ((load_to_tail = sb_graph_edge(g, load_to_tail_baton, load, tail)) == NULL) {
-        err = true;
-        goto cleanup;
+        if ((load_to_tail = sb_graph_edge(g, load_to_tail_baton, load, tail)) == NULL) {
+            err = true;
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            goto cleanup;
+        }
     }
 
 cleanup:
@@ -164,6 +169,10 @@ cleanup:
 }
 
 struct sb_vertex_s * sb_ast__compile_recurse(struct sb_ast_s * ast, struct sb_graph_s * g, struct sb_vertex_s * ret) {
+    if (ast == NULL) {
+        return NULL;
+    }
+
     switch (ast->type) {
         case SB_AST_TYPE_ASSERT:
             return sb_ast__emit_assert(ast, g, ret);
@@ -181,6 +190,7 @@ struct sb_graph_s * sb_ast_compile(struct sb_ast_s * ast) {
     bool err = false;
     struct sb_vertex_s * func = NULL;
     struct sb_graph_s * g = NULL;
+
 
     if ((g = sb_graph_create()) == NULL) {
         err = true;
