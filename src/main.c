@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <linux/filter.h>
-#include "bpf.h"
-#include "graph.h"
+#include "simbpf.h"
 
 int main()
 {

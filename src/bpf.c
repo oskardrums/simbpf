@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "bpf.h"
+#include "simbpf/bpf.h"
 
 struct bpf_cc_s * bpf__concat(struct bpf_cc_s * cc, struct bpf_cc_s * other)
 {

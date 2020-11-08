@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "graph.h"
+#include "simbpf/graph.h"
 
 struct graph_s * graph_create()
 {
