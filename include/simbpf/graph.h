@@ -1,27 +1,19 @@
 #ifndef SIMBPF_GRAPH_H
 #define SIMBPF_GRAPH_H
-/*
-#define def_list(node)         \
-struct node##_list_s             \
-{                              \
-    struct node##_s * curr;      \
-    struct node##_list_s * next; \
-}
 
+#include "simbpf/bpf.h"
 
-def_list(vertex);
-def_list(edge);
-*/
+#define SB_GRAPH_INITIAL_CAPACITY 1024
 
 struct sb_vertex_s
 {
-    void * weight;
+    struct sb_bpf_baton_s * weight;
     struct sb_vertex_s * next;
 };
 
 struct sb_edge_s
 {
-    void * weight;
+    struct sb_bpf_baton_s * weight;
     struct sb_vertex_s * src;
     struct sb_vertex_s * dst;
     struct sb_edge_s * next;
@@ -41,4 +33,7 @@ struct sb_edge_s * sb_graph_edges_from_to(struct sb_graph_s * g, struct sb_verte
 struct sb_edge_s * sb_graph_edges_from_to_r(struct sb_graph_s * g, struct sb_vertex_s * src, struct sb_vertex_s * dst, struct sb_edge_s * r) __attribute__((nonnull(1, 2, 3)));
 struct sb_edge_s * sb_graph_edges_from(struct sb_graph_s * g, struct sb_vertex_s * src) __attribute__((nonnull(1, 2)));
 struct sb_edge_s * sb_graph_edges_from_r(struct sb_graph_s * g, struct sb_vertex_s * src, struct sb_edge_s * r) __attribute__((nonnull(1, 2)));
+
+
+struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s * entry) __attribute__((nonnull(1,2)));
 #endif

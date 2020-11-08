@@ -126,3 +126,66 @@ void sb_graph_destroy(struct sb_graph_s * g)
 
     free(g);
 }
+
+struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s * entry)
+{
+    struct sb_edge_s * e = NULL;
+    struct sb_bpf_baton_s * entry_baton = entry->weight;
+    struct sb_bpf_cc_s * cc = (typeof(cc))malloc(sizeof(*cc) + sizeof(cc->insns[0]) * SB_GRAPH_INITIAL_CAPACITY);
+    if (cc == NULL) {
+        perror("malloc");
+        return NULL;
+    }
+    memset(cc, 0, sizeof(*cc) + sizeof(cc->insns[0]) * SB_GRAPH_INITIAL_CAPACITY);
+    cc->capacity = SB_GRAPH_INITIAL_CAPACITY;
+
+    entry_baton->addr = cc->current;
+    cc = sb_bpf__append(cc, entry_baton);
+    if (cc == NULL) {
+        perror("append");
+        return NULL;
+    }
+
+    for (e = sb_graph_edges_from(g, entry); e != NULL; e = sb_graph_edges_from_r(g, entry, e)) {
+        printf("loop1\n");
+        struct sb_bpf_baton_s * dst_baton = e->dst->weight;
+        struct sb_bpf_baton_s * e_baton = e->weight;
+
+        e_baton->addr = cc->current;
+
+        if (dst_baton->addr != 0) {
+            e_baton->insns[0].off = dst_baton->addr - e_baton->addr;
+        }
+
+        cc = sb_bpf__append(cc, e->weight);
+        if (cc == NULL) {
+            perror("append");
+            return NULL;
+        }
+    }
+
+    for (e = sb_graph_edges_from(g, entry); e != NULL; e = sb_graph_edges_from_r(g, entry, e)) {
+        printf("loop2\n");
+        struct sb_bpf_cc_s * sub_cc = NULL;
+        struct sb_bpf_baton_s * e_baton = e->weight;
+        struct sb_bpf_baton_s * src_baton = e->src->weight;
+
+        if (cc->insns[e_baton->addr].off == 0) {
+            cc->insns[e_baton->addr].off = cc->current - src_baton->addr;
+            sub_cc = sb_graph_compile(g, e->dst);
+            if (sub_cc == NULL) {
+                perror("compile");
+                return NULL;
+            }
+            cc = sb_bpf__concat(cc, sub_cc);
+            free(sub_cc);
+            if (cc == NULL) {
+                perror("concat");
+                return NULL;
+            }
+        }
+    }
+
+    return cc;
+}
+

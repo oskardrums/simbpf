@@ -16,7 +16,7 @@ int test_ast() {
         return -1;
     }
     unsigned short eth_p = ETH_P_ARP;
-    ast = sb_ast_assert_set_data(ast, 12, 2, &eth_p);
+    ast = sb_ast_assert_set_data(ast, 12, 2, eth_p);
     if (ast == NULL) {
         return -1;
     }
@@ -113,7 +113,7 @@ int main()
 */
 
 
-    struct sb_bpf_cc_s * result = sb_bpf_compile_graph(g, v1);
+    struct sb_bpf_cc_s * result = sb_graph_compile(g, v1);
     sb_bpf_cc_dump(result);
     free(result);
     free(baton);

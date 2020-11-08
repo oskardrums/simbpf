@@ -6,9 +6,6 @@
 #include <linux/filter.h>
 
 #include "bpf_insn.h"
-#include "simbpf/graph.h"
-
-#define SB_GRAPH_INITIAL_CAPACITY 1024
 
 struct sb_bpf_cc_s {
     size_t current;
@@ -23,8 +20,10 @@ struct sb_bpf_baton_s
     struct bpf_insn insns[];
 };
 
-struct sb_bpf_cc_s * sb_bpf_compile_graph(struct sb_graph_s * g, struct sb_vertex_s * entry) __attribute__((nonnull(1,2)));
+struct sb_bpf_cc_s * sb_bpf__append(struct sb_bpf_cc_s * cc, struct sb_bpf_baton_s * baton);
+struct sb_bpf_cc_s * sb_bpf__concat(struct sb_bpf_cc_s * cc, struct sb_bpf_cc_s * other);
 
 void sb_bpf_cc_dump(struct sb_bpf_cc_s *);
 
+struct sb_bpf_baton_s * sb_bpf_baton_create(size_t);
 #endif
