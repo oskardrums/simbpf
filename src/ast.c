@@ -15,6 +15,13 @@ struct sb_ast_s * sb_ast_create(int type)
     return ast;
 }
 
+struct sb_ast_s * sb_ast_return_set_data(struct sb_ast_s * ast, int value)
+{
+    assert(ast->type == SB_AST_TYPE_RETURN);
+    ast->data.ast_return.value = value;
+    return ast;
+}
+
 struct sb_ast_s * sb_ast_function_set_data(struct sb_ast_s * ast, struct sb_ast_s * body)
 {
     assert(ast->type == SB_AST_TYPE_FUNCTION);
@@ -101,6 +108,52 @@ struct sb_vertex_s * sb_ast__emit_function(struct sb_ast_s * ast, struct sb_grap
     return prolog;
 }
 
+struct sb_vertex_s * sb_ast__emit_return(struct sb_ast_s * ast, struct sb_graph_s * g, struct sb_vertex_s * ret)
+{
+    bool err = false;
+    struct sb_vertex_s * load = NULL;
+    struct sb_edge_s * load_to_ret = NULL;
+    struct sb_bpf_baton_s * load_baton = NULL; 
+    struct sb_bpf_baton_s * load_to_ret_baton = NULL; 
+    
+    if ((load_baton = sb_bpf_baton_create(1)) == NULL) {
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
+    }
+    load_baton->insns[0] = BPF_MOV64_IMM(BPF_REG_0, ast->data.ast_return.value);
+
+    if ((load = sb_graph_vertex(g, load_baton)) == NULL) {
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
+    }
+
+    if ((load_to_ret_baton = sb_bpf_baton_create(1)) == NULL) {
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
+    }
+    load_to_ret_baton->insns[0] = BPF_JMP_A(0);
+
+    if ((load_to_ret = sb_graph_edge(g, load_to_ret_baton, load, ret)) == NULL) {
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
+    }
+
+cleanup:
+    if (err) {
+        if (load_baton != NULL) {
+            free(load_baton);
+        }
+        if (load_to_ret_baton != NULL) {
+            free(load_to_ret_baton);
+        }
+    }
+    return load;
+}
+
 struct sb_vertex_s * sb_ast__emit_assert(struct sb_ast_s * ast, struct sb_graph_s * g, struct sb_vertex_s * ret)
 {
     bool err = false;
@@ -174,11 +227,14 @@ struct sb_vertex_s * sb_ast__compile_recurse(struct sb_ast_s * ast, struct sb_gr
     }
 
     switch (ast->type) {
+        case SB_AST_TYPE_FUNCTION:
+            return sb_ast__emit_function(ast, g);
+            break;
         case SB_AST_TYPE_ASSERT:
             return sb_ast__emit_assert(ast, g, ret);
             break;
-        case SB_AST_TYPE_FUNCTION:
-            return sb_ast__emit_function(ast, g);
+        case SB_AST_TYPE_RETURN:
+            return sb_ast__emit_return(ast, g, ret);
             break;
         default:
             return NULL;

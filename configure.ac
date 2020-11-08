@@ -13,7 +13,9 @@ AC_PROG_CC
 AC_CHECK_HEADERS([stddef.h stdlib.h string.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
+AC_CHECK_HEADER_STDBOOL
 AC_TYPE_SIZE_T
+AC_TYPE_UINT64_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC

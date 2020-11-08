@@ -12,6 +12,20 @@ int test_ast()
     struct sb_graph_s * g = NULL;
     struct sb_ast_s * func = NULL;
     struct sb_ast_s * assertion = NULL;
+    struct sb_ast_s * ret = NULL;
+
+    printf("test_ast: sb_ast_create(SB_AST_TYPE_RETURN)\n");
+    ret = sb_ast_create(SB_AST_TYPE_RETURN);
+    if (ret == NULL) {
+        err = true;
+        goto cleanup;
+    }
+
+    ret = sb_ast_return_set_data(ret, XDP_PASS);
+    if (ret == NULL) {
+        err = true;
+        goto cleanup;
+    }
 
     printf("test_ast: sb_ast_create(SB_AST_TYPE_ASSERT)\n");
     assertion = sb_ast_create(SB_AST_TYPE_ASSERT);
@@ -19,7 +33,7 @@ int test_ast()
         err = true;
         goto cleanup;
     }
-    assertion = sb_ast_assert_set_data(assertion, 12, 2, ETH_P_ARP, NULL);
+    assertion = sb_ast_assert_set_data(assertion, 12, 2, ETH_P_ARP, ret);
     if (assertion == NULL) {
         err = true;
         goto cleanup;
