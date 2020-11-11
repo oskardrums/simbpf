@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install libbpf
-      run: apt install libbpf-dev
+      run: sudo apt install libbpf-dev
     - name: configure
       run: ./configure
     - name: make
