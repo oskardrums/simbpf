@@ -32,7 +32,63 @@ struct sb_graph_s * sb_graph_create()
 }
 
 
-struct sb_vertex_s * sb_graph_vertex(struct sb_graph_s * g, void * weight) 
+void sb_ew_destroy(struct sb_ew_s * ew)
+{
+    if (ew != NULL) {
+        if (ew->block != NULL) {
+            sb_block_destroy(ew->block);
+        }
+        free(ew);
+    }
+}
+
+struct sb_ew_s * sb_ew_create(struct bpf_insn * p, size_t n)
+{
+    struct sb_ew_s * ew = NULL;
+
+    if ((ew =(typeof(ew))malloc(sizeof(*ew))) == NULL) {
+        return NULL;
+    }
+
+    memset(ew, 0, sizeof(*ew));
+
+    if ((ew->block = sb_block_create(p, n)) == NULL) {
+        free(ew);
+        return NULL;
+    }
+
+    return ew;
+}
+
+void sb_vw_destroy(struct sb_vw_s * vw)
+{
+    if (vw != NULL) {
+        if (vw->block != NULL) {
+            sb_block_destroy(vw->block);
+        }
+        free(vw);
+    }
+}
+
+struct sb_vw_s * sb_vw_create(struct bpf_insn * p, size_t n)
+{
+    struct sb_vw_s * vw = NULL;
+
+    if ((vw =(typeof(vw))malloc(sizeof(*vw))) == NULL) {
+        return NULL;
+    }
+
+    memset(vw, 0, sizeof(*vw));
+
+    if ((vw->block = sb_block_create(p, n)) == NULL) {
+        free(vw);
+        return NULL;
+    }
+
+    return vw;
+}
+
+struct sb_vertex_s * sb_graph_vertex(struct sb_graph_s * g, struct sb_vw_s * weight) 
 {
     struct sb_vertex_s * temp = NULL;
     struct sb_vertex_s * tail = g->v;
@@ -51,7 +107,7 @@ struct sb_vertex_s * sb_graph_vertex(struct sb_graph_s * g, void * weight)
 }
 
 
-struct sb_edge_s * sb_graph_edge(struct sb_graph_s * g, void * weight, struct sb_vertex_s * src, struct sb_vertex_s * dst) 
+struct sb_edge_s * sb_graph_edge(struct sb_graph_s * g, struct sb_ew_s * weight, struct sb_vertex_s * src, struct sb_vertex_s * dst) 
 {
     struct sb_edge_s * temp = NULL;
     struct sb_edge_s * tail = g->e;
@@ -231,5 +287,53 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
     }
 
     return cc;
+}
+
+
+struct sb_vertex_s * sb_graph_vertex_with_insns(struct sb_graph_s * g, struct bpf_insn * p, size_t n)
+{
+    struct sb_vertex_s * v = NULL;
+    struct sb_vw_s * vw = NULL;
+
+    if ((vw = sb_vw_create(p, n)) == NULL) {
+        return NULL;
+    }
+
+    if ((v = sb_graph_vertex(g, vw)) == NULL) {
+        sb_vw_destroy(vw);
+        return NULL;
+    }
+
+    return v;
+}
+
+struct sb_edge_s * sb_graph_edge_with_insns(struct sb_graph_s * g, struct sb_vertex_s * v1, struct sb_vertex_s * v2, struct bpf_insn * p, size_t n)
+{
+    struct sb_edge_s * e = NULL;
+    struct sb_ew_s * ew = NULL;
+
+    if ((ew = sb_ew_create(p, n)) == NULL) {
+        return NULL;
+    }
+
+    if ((e = sb_graph_edge(g, ew, v1, v2)) == NULL) {
+        sb_ew_destroy(ew);
+        return NULL;
+    }
+
+    return e;
+}
+
+struct sb_edge_s * sb_graph_edge_fallthrough(struct sb_graph_s * g, struct sb_vertex_s * v1, struct sb_vertex_s * v2)
+{
+    return sb_graph_edge_with_insns(g, v1, v2, NULL, 0);
+}
+
+struct sb_edge_s * sb_graph_edge_uncond(struct sb_graph_s * g, struct sb_vertex_s * v1, struct sb_vertex_s * v2)
+{
+    struct bpf_insn is[] = {
+        BPF_JMP_A(0),
+    };
+    return sb_graph_edge_with_insns(g, v1, v2, is, array_sizeof(is));
 }
 

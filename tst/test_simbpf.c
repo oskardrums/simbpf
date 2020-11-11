@@ -23,12 +23,14 @@ int test_ast()
     ret = sb_ast_create(SB_AST_TYPE_RETURN);
     if (ret == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
     ret = sb_ast_return_set_data(ret, XDP_PASS);
     if (ret == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
@@ -36,11 +38,13 @@ int test_ast()
     assertion = sb_ast_create(SB_AST_TYPE_ASSERT);
     if (assertion == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
-    assertion = sb_ast_assert_set_data(assertion, 12, 2, ETH_P_ARP, ret);
+    assertion = sb_ast_assert_set_data(assertion, 12, BPF_H, ETH_P_ARP, ret);
     if (assertion == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
@@ -48,12 +52,14 @@ int test_ast()
     func = sb_ast_create(SB_AST_TYPE_FUNCTION);
     if (func == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
     func = sb_ast_function_set_data(func, assertion);
     if (func == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
@@ -61,6 +67,7 @@ int test_ast()
     g = sb_ast_compile(func);
     if (g == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
@@ -68,6 +75,7 @@ int test_ast()
     b = sb_graph_compile(g, g->v->next, NULL);
     if (b == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
@@ -78,12 +86,14 @@ int test_ast()
     if (prog_fd < 0) {
         printf(buffer);
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
     printf("test_ast: bpf_set_link_xdp_fd\n");
     if (bpf_set_link_xdp_fd(1, prog_fd, 0) < 0) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
@@ -92,6 +102,7 @@ int test_ast()
     printf("test_ast: bpf_set_link_xdp_fd second time arround\n");
     if (bpf_set_link_xdp_fd(1, -1, 0) < 0) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 

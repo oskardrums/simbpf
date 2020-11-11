@@ -48,97 +48,42 @@ void sb_ast_destroy(struct sb_ast_s * ast)
 
 struct sb_vertex_s * sb_ast__emit_function(struct sb_ast_s * ast, struct sb_graph_s * g)
 {
-    struct sb_vertex_s * prolog = NULL;
-    struct sb_vertex_s * body = NULL;
-    struct sb_vertex_s * epilog = NULL;
-    struct sb_edge_s * prolog_to_body = NULL;
-    struct sb_bpf_baton_s * prolog_baton = NULL; 
-    struct sb_bpf_baton_s * epilog_baton = NULL; 
-    struct sb_bpf_baton_s * prolog_to_body_baton = NULL; 
-
-    prolog_baton = sb_bpf_baton_create(3);
-    if (prolog_baton == NULL) {
-        return NULL;
-    }
-    prolog_baton->insns[0] = BPF_LDX_MEM(BPF_W, BPF_REG_8, BPF_REG_1, 0);
-    prolog_baton->insns[1] = BPF_LDX_MEM(BPF_W, BPF_REG_9, BPF_REG_1, 4);
-    prolog_baton->insns[2] = BPF_MOV64_IMM(BPF_REG_0, XDP_DROP);
-
-    prolog = sb_graph_vertex(g, prolog_baton);
-    if (prolog == NULL) {
-        free(prolog_baton);
-        return NULL;
-    }
-
-    epilog_baton = sb_bpf_baton_create(1);
-    if (epilog_baton == NULL) {
-        free(prolog_baton);
-        return NULL;
-    }
-    epilog_baton->insns[0] = BPF_EXIT_INSN();
-
-    epilog = sb_graph_vertex(g, epilog_baton);
-    if (epilog == NULL) {
-        free(prolog_baton);
-        free(epilog_baton);
-        return NULL;
-    }
-
-    body = sb_ast__compile_recurse(ast->data.ast_function.body, g, epilog);
-    if (body == NULL) {
-        free(prolog_baton);
-        free(epilog_baton);
-        return NULL;
-    }
-
-    prolog_to_body_baton = sb_bpf_baton_create(1);
-    if (prolog_to_body_baton == NULL) {
-        free(prolog_baton);
-        free(epilog_baton);
-        return NULL;
-    }
-    prolog_to_body_baton->insns[0] = BPF_JMP_A(0);
-
-    prolog_to_body = sb_graph_edge(g, prolog_to_body_baton, prolog, body);
-    if (prolog_to_body == NULL) {
-        free(prolog_baton);
-        free(epilog_baton);
-        free(prolog_to_body_baton);
-        return NULL;
-    }
-
-    return prolog;
-}
-
-struct sb_vertex_s * sb_ast__emit_return(struct sb_ast_s * ast, struct sb_graph_s * g, struct sb_vertex_s * ret)
-{
     bool err = false;
-    struct sb_vertex_s * load = NULL;
-    struct sb_edge_s * load_to_ret = NULL;
-    struct sb_bpf_baton_s * load_baton = NULL; 
-    struct sb_bpf_baton_s * load_to_ret_baton = NULL; 
-    
-    if ((load_baton = sb_bpf_baton_create(1)) == NULL) {
+
+    struct sb_vertex_s * prolog_v = NULL;
+    struct sb_vertex_s * body_v = NULL;
+    struct sb_vertex_s * epilog = NULL;
+    struct sb_edge_s * prolog_to_body_e = NULL;
+
+    struct bpf_insn prolog_i[] = {
+        BPF_LDX_MEM(BPF_W, BPF_REG_8, BPF_REG_1, 0),
+        BPF_LDX_MEM(BPF_W, BPF_REG_9, BPF_REG_1, 4),
+        BPF_MOV64_IMM(BPF_REG_0, XDP_DROP),
+    };
+
+    struct bpf_insn epilog_i[] = {
+        BPF_EXIT_INSN(),
+    };
+
+    if ((prolog_v = sb_graph_vertex_with_insns(g, prolog_i, array_sizeof(prolog_i))) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
-    load_baton->insns[0] = BPF_MOV64_IMM(BPF_REG_0, ast->data.ast_return.value);
 
-    if ((load = sb_graph_vertex(g, load_baton)) == NULL) {
+    if ((epilog = sb_graph_vertex_with_insns(g, epilog_i, array_sizeof(epilog_i))) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
-    if ((load_to_ret_baton = sb_bpf_baton_create(1)) == NULL) {
+    if ((body_v = sb_ast__compile_recurse(ast->data.ast_function.body, g, epilog)) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
-    load_to_ret_baton->insns[0] = BPF_JMP_A(0);
 
-    if ((load_to_ret = sb_graph_edge(g, load_to_ret_baton, load, ret)) == NULL) {
+    if ((prolog_to_body_e = sb_graph_edge_uncond(g, prolog_v, body_v)) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
@@ -146,79 +91,63 @@ struct sb_vertex_s * sb_ast__emit_return(struct sb_ast_s * ast, struct sb_graph_
 
 cleanup:
     if (err) {
-        if (load_baton != NULL) {
-            free(load_baton);
-        }
-        if (load_to_ret_baton != NULL) {
-            free(load_to_ret_baton);
-        }
+        return NULL;
     }
-    return load;
+
+    return prolog_v;
 }
 
-
-struct sb_vertex_s * sb_graph_vertex_with_insns(struct sb_graph_s * g, struct bpf_insn * p, size_t n)
+struct sb_vertex_s * sb_ast__emit_return(struct sb_ast_s * ast, struct sb_graph_s * g, struct sb_vertex_s * ret_v)
 {
-    size_t i;
-    struct sb_vertex_s * v = NULL;
-    struct sb_bpf_baton_s * b = NULL;
-    if ((b = sb_bpf_baton_create(n)) == NULL) {
+    bool err = false;
+    struct sb_vertex_s * load_v = NULL;
+    struct sb_edge_s * load_to_ret_e = NULL;
+
+    struct bpf_insn load_i[] = {
+        BPF_MOV64_IMM(BPF_REG_0, ast->data.ast_return.value),
+    };
+
+    if ((load_v = sb_graph_vertex_with_insns(g, load_i, array_sizeof(load_i))) == NULL) {
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
+    }
+
+    if ((load_to_ret_e = sb_graph_edge_uncond(g, load_v, ret_v)) == NULL) {
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
+    }
+
+cleanup:
+    if (err) {
         return NULL;
     }
-
-    for (i = 0; i < n; ++i) {
-        b->insns[i] = p[i];
-    }
-
-    if ((v = sb_graph_vertex(g, b)) == NULL) {
-        free(b);
-        return NULL;
-    }
-
-    return v;
+    return load_v;
 }
 
-struct sb_edge_s * sb_graph_edge_with_insns(struct sb_graph_s * g, struct sb_vertex_s * v1, struct sb_vertex_s * v2, struct bpf_insn * p, size_t n)
+size_t sb__bpf_size_to_size(int bs)
 {
-    size_t i;
-    struct sb_edge_s * e = NULL;
-    struct sb_bpf_baton_s * b = NULL;
-    if ((b = sb_bpf_baton_create(n)) == NULL) {
-        return NULL;
+    switch (bs) {
+        case BPF_B:
+            return 1;
+            break;
+        case BPF_H:
+            return 2;
+            break;
+        case BPF_W:
+            return 4;
+            break;
+        case BPF_DW:
+            return 8;
+            break;
+        default:
+            return 0;
+            break;
     }
-
-    for (i = 0; i < n; ++i) {
-        b->insns[i] = p[i];
-    }
-
-    if ((e = sb_graph_edge(g, b, v1, v2)) == NULL) {
-        free(b);
-        return NULL;
-    }
-
-    return e;
 }
 
-struct sb_edge_s * sb_graph_edge_uncond(struct sb_graph_s * g, struct sb_vertex_s * v1, struct sb_vertex_s * v2)
-{
-    struct sb_edge_s * e = NULL;
-    struct sb_bpf_baton_s * b = NULL;
-    if ((b = sb_bpf_baton_create(1)) == NULL) {
-        return NULL;
-    }
-
-    b->insns[0] = BPF_JMP_A(0);
-
-    if ((e = sb_graph_edge(g, b, v1, v2)) == NULL) {
-        free(b);
-        return NULL;
-    }
-
-    return e;
-}
-
-#define array_sizeof(x) sizeof((x))/sizeof((x)[0])
-struct sb_vertex_s * sb_ast__emit_assert(struct sb_ast_s * ast, struct sb_graph_s * g, struct sb_vertex_s * ret)
+struct sb_vertex_s * sb_ast__emit_assert(struct sb_ast_s * ast, struct sb_graph_s * g, struct sb_vertex_s * ret_v)
 {
     bool err = false;
     struct sb_vertex_s * bounds_check_v = NULL;
@@ -229,9 +158,10 @@ struct sb_vertex_s * sb_ast__emit_assert(struct sb_ast_s * ast, struct sb_graph_
     struct sb_edge_s * body_to_tail_e = NULL;
     struct sb_edge_s * body_to_ret_e = NULL;
 
+
     struct bpf_insn bounds_check_i[] = {
         BPF_MOV64_REG(BPF_REG_3, BPF_REG_8),
-        BPF_ALU64_IMM(BPF_ADD, BPF_REG_3, ast->data.ast_assert.offset + ast->data.ast_assert.size)
+        BPF_ALU64_IMM(BPF_ADD, BPF_REG_3, ast->data.ast_assert.offset + sb__bpf_size_to_size(ast->data.ast_assert.size))
     };
     struct bpf_insn body_i[] = {
         BPF_LDX_MEM(ast->data.ast_assert.size, BPF_REG_3, BPF_REG_8, ast->data.ast_assert.offset),
@@ -254,10 +184,17 @@ struct sb_vertex_s * sb_ast__emit_assert(struct sb_ast_s * ast, struct sb_graph_
         goto cleanup;
     }
 
+    if ((bounds_check_to_body_e = sb_graph_edge_fallthrough(g, bounds_check_v, body_v)) == NULL) {
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
+    }
+
+
     if ((bounds_check_to_ret_e = sb_graph_edge_with_insns(
                     g,
                     bounds_check_v,
-                    ret,
+                    ret_v,
                     bounds_check_to_ret_i, 
                     sizeof(bounds_check_to_ret_i)/sizeof(bounds_check_to_ret_i[0])
                     )) == NULL)
@@ -267,31 +204,25 @@ struct sb_vertex_s * sb_ast__emit_assert(struct sb_ast_s * ast, struct sb_graph_
         goto cleanup;
     }
 
-    if ((bounds_check_to_body_e = sb_graph_edge_uncond(g, bounds_check_v, body_v)) == NULL) {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
-
-
-    if ((tail = sb_ast__compile_recurse(ast->data.ast_assert.tail, g, ret)) != NULL) {
-        printf("dddddddd\n");
-        if ((body_to_tail_e = sb_graph_edge_uncond(g, body_v, tail)) == NULL) {
+    if ((tail = sb_ast__compile_recurse(ast->data.ast_assert.tail, g, ret_v)) != NULL) {
+        if ((body_to_tail_e = sb_graph_edge_fallthrough(g, body_v, tail)) == NULL) {
             err = true;
             printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
             goto cleanup;
         }
-    } else {
-        printf("eeeeeeee\n");
     }
+    /*
+    } else {
+    }
+
 
     if ((body_to_tail_e = sb_graph_edge_uncond(g, body_v, tail)) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
-
-    if ((body_to_ret_e = sb_graph_edge_with_insns(g, body_v, ret, body_to_ret_i, array_sizeof(body_to_ret_i))) == NULL) {
+*/
+    if ((body_to_ret_e = sb_graph_edge_with_insns(g, body_v, ret_v, body_to_ret_i, array_sizeof(body_to_ret_i))) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
@@ -301,28 +232,38 @@ cleanup:
     if (err) {
         return NULL;
     }
+    printf("sb_ast__emit_assert: bounds_check_v is still %p\n", bounds_check_v);
     return bounds_check_v;
 }
 
 struct sb_vertex_s * sb_ast__compile_recurse(struct sb_ast_s * ast, struct sb_graph_s * g, struct sb_vertex_s * ret) {
+
     if (ast == NULL) {
-        return NULL;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
     }
 
     switch (ast->type) {
         case SB_AST_TYPE_FUNCTION:
+            printf("sb_ast__compile_recurse: SB_AST_TYPE_FUNCTION\n");
             return sb_ast__emit_function(ast, g);
             break;
         case SB_AST_TYPE_ASSERT:
+            printf("sb_ast__compile_recurse: SB_AST_TYPE_ASSERT\n");
             return sb_ast__emit_assert(ast, g, ret);
             break;
         case SB_AST_TYPE_RETURN:
+            printf("sb_ast__compile_recurse: SB_AST_TYPE_RETURN\n");
             return sb_ast__emit_return(ast, g, ret);
             break;
         default:
-            return NULL;
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            goto cleanup;
             break;
     }
+
+cleanup:
+    return NULL;
 }
 
 struct sb_graph_s * sb_ast_compile(struct sb_ast_s * ast) {
@@ -333,11 +274,13 @@ struct sb_graph_s * sb_ast_compile(struct sb_ast_s * ast) {
 
     if ((g = sb_graph_create()) == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
     if ((func = sb_ast__compile_recurse(ast, g, NULL)) == NULL) {
         err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 

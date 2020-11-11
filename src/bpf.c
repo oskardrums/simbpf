@@ -10,7 +10,7 @@ struct sb_block_s * sb_block_create(struct bpf_insn * p, size_t n)
         return NULL;
     }
     
-    memset(b->insns, 0, sizeof(*b) + sizeof(b->insns[0]) * n);
+    memset(b->insns, 0, sizeof(*b) + sizeof(b->insns[0]) * (n - 1));
     b->len = n;
     memcpy(b->insns, p, sizeof(b->insns[0]) * n);
 
