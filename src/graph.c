@@ -31,7 +31,6 @@ struct sb_graph_s * sb_graph_create()
     return g;
 }
 
-
 void sb_ew_destroy(struct sb_ew_s * ew)
 {
     if (ew != NULL) {
@@ -105,7 +104,6 @@ struct sb_vertex_s * sb_graph_vertex(struct sb_graph_s * g, struct sb_vw_s * wei
     tail->next->next = NULL;
     return tail->next;
 }
-
 
 struct sb_edge_s * sb_graph_edge(struct sb_graph_s * g, struct sb_ew_s * weight, struct sb_vertex_s * src, struct sb_vertex_s * dst) 
 {
@@ -205,12 +203,14 @@ void sb_graph_destroy(struct sb_graph_s * g)
     struct sb_vertex_s * v = NULL;
 
     while (e = g->e->next) {
+        sb_ew_destroy(e->weight);
         g->e->next = e->next;
         free(e);
     }
     free(g->e);
 
     while (v = g->v->next) {
+        sb_vw_destroy(v->weight);
         g->v->next = v->next;
         free(v);
     }

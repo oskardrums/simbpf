@@ -97,31 +97,37 @@ int test_ast()
         goto cleanup;
     }
 
-    free(b);
-
-    printf("test_ast: bpf_set_link_xdp_fd second time arround\n");
-    if (bpf_set_link_xdp_fd(1, -1, 0) < 0) {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
-
-    printf("test_ast: sb_graph_destroy\n");
-    sb_graph_destroy(g);
-
-    printf("test_ast: sb_ast_destroy\n");
-    sb_ast_destroy(assertion);
-    sb_ast_destroy(func);
 
 cleanup:
-    if (err) {
-        if (prog_fd >= 0) {
-            close(prog_fd);
-        }
-        prog_fd = -1;
-        return -1;
+    printf("test_ast: cleanup\n");
+
+    if (b != NULL) {
+        free(b);
     }
-    return 0;
+
+    if (g != NULL) {
+        sb_graph_destroy(g);
+    }
+
+    if (ret != NULL) {
+        sb_ast_destroy(ret);
+    }
+    if (assertion != NULL) {
+        sb_ast_destroy(assertion);
+    }
+    if (func != NULL) {
+        sb_ast_destroy(func);
+    }
+    if (prog_fd >= 0) {
+        close(prog_fd);
+    }
+
+    if (err) {
+        return -1;
+    } else {
+        bpf_set_link_xdp_fd(1, -1, 0);
+        return 0;
+    }
 }
 
 int main()

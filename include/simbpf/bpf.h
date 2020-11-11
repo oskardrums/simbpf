@@ -34,4 +34,5 @@ void sb_bpf_cc_dump(struct sb_bpf_cc_s *);
 
 struct sb_block_s * sb_block_create(struct bpf_insn *, size_t);
 
+size_t sb__bpf_size_to_size(int bs);
 #endif

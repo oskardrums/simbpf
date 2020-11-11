@@ -126,27 +126,6 @@ cleanup:
     return load_v;
 }
 
-size_t sb__bpf_size_to_size(int bs)
-{
-    switch (bs) {
-        case BPF_B:
-            return 1;
-            break;
-        case BPF_H:
-            return 2;
-            break;
-        case BPF_W:
-            return 4;
-            break;
-        case BPF_DW:
-            return 8;
-            break;
-        default:
-            return 0;
-            break;
-    }
-}
-
 struct sb_vertex_s * sb_ast__emit_assert(struct sb_ast_s * ast, struct sb_graph_s * g, struct sb_vertex_s * ret_v)
 {
     bool err = false;

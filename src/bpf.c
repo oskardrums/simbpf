@@ -68,3 +68,25 @@ void sb_bpf_cc_dump(struct sb_bpf_cc_s * cc) {
         printf("%lu: 0x%02x, %u, %u, %d, %d\n", i, o.code, o.dst_reg, o.src_reg, o.off, o.imm);
     }
 }
+
+
+size_t sb__bpf_size_to_size(int bs)
+{
+    switch (bs) {
+        case BPF_B:
+            return 1;
+            break;
+        case BPF_H:
+            return 2;
+            break;
+        case BPF_W:
+            return 4;
+            break;
+        case BPF_DW:
+            return 8;
+            break;
+        default:
+            return 0;
+            break;
+    }
+}
