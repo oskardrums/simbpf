@@ -49,13 +49,7 @@ struct sb_bpf_cc_s * sb_bpf_cc_push(struct sb_bpf_cc_s * cc, struct sb_block_s *
             }
         }
         memcpy(&(cc->insns[cc->current]), block->insns, block->len*sizeof(block->insns[0]));
-        printf("updating current %lu + %lu = ", cc->current, block->len);
         cc->current += block->len;
-        printf("%lu\n", cc->current);
-        for (size_t i = 0; i < block->len; ++i) {
-            struct bpf_insn o = block->insns[i];
-            printf("%lu: 0x%02x, %u, %u, %d, %d\n", cc->current - 1, o.code, o.dst_reg, o.src_reg, o.off, o.imm);
-        }
     }
     return cc;
 }

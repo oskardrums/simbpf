@@ -190,17 +190,7 @@ struct sb_vertex_s * sb_ast__emit_assert(struct sb_ast_s * ast, struct sb_graph_
             goto cleanup;
         }
     }
-    /*
-    } else {
-    }
 
-
-    if ((body_to_tail_e = sb_graph_edge_uncond(g, body_v, tail)) == NULL) {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
-*/
     if ((body_to_ret_e = sb_graph_edge_with_insns(g, body_v, ret_v, body_to_ret_i, array_sizeof(body_to_ret_i))) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
@@ -211,7 +201,6 @@ cleanup:
     if (err) {
         return NULL;
     }
-    printf("sb_ast__emit_assert: bounds_check_v is still %p\n", bounds_check_v);
     return bounds_check_v;
 }
 
@@ -224,15 +213,12 @@ struct sb_vertex_s * sb_ast__compile_recurse(struct sb_ast_s * ast, struct sb_gr
 
     switch (ast->type) {
         case SB_AST_TYPE_FUNCTION:
-            printf("sb_ast__compile_recurse: SB_AST_TYPE_FUNCTION\n");
             return sb_ast__emit_function(ast, g);
             break;
         case SB_AST_TYPE_ASSERT:
-            printf("sb_ast__compile_recurse: SB_AST_TYPE_ASSERT\n");
             return sb_ast__emit_assert(ast, g, ret);
             break;
         case SB_AST_TYPE_RETURN:
-            printf("sb_ast__compile_recurse: SB_AST_TYPE_RETURN\n");
             return sb_ast__emit_return(ast, g, ret);
             break;
         default:

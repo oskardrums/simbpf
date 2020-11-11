@@ -219,18 +219,13 @@ void sb_graph_destroy(struct sb_graph_s * g)
     free(g);
 }
 
-static long depth = 0;
-
 struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s * entry, struct sb_bpf_cc_s * cc)
 {
     struct sb_edge_s * e = NULL;
     struct sb_vw_s * entry_w = entry->weight;
     struct sb_block_s * entry_b = entry_w->block;
 
-    printf("sb_graph_compile: entering depth=%ld\n", depth);
-
     if (entry_w->set) {
-        printf("been here done that\n");
         return cc;
     }
 
@@ -239,12 +234,8 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
             perror("sb_graph_compile: can't create compiler context");
             return NULL;
         }
-        depth = 0;
-    } else {
-        ++depth;
     }
 
-    printf("setting vw@%p->addr = %lu (was %lu)\n", entry_w, cc->current, entry_w->addr);
     entry_w->addr = cc->current;
     cc = sb_bpf_cc_push(cc, entry_b);
     if (cc == NULL) {
@@ -282,7 +273,6 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
                 return NULL;
             }
         }
-        printf("fixing jump %lu->%lu (%d)\n", ew->addr, dst_w->addr, cc->insns[ew->addr].off);
         cc->insns[ew->addr].off = dst_w->addr - ew->addr - 1;
     }
 
