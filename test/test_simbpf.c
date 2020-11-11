@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <net/ethernet.h>
+#include <linux/in.h>
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
 
@@ -15,6 +16,7 @@ int test_ast()
     struct sb_graph_s * g = NULL;
     struct sb_ast_s * func = NULL;
     struct sb_ast_s * assertion = NULL;
+    struct sb_ast_s * assertion2 = NULL;
     struct sb_ast_s * ret = NULL;
     int prog_fd = -1;
     char buffer[4096];
@@ -35,13 +37,27 @@ int test_ast()
     }
 
     printf("test_ast: sb_ast_create(SB_AST_TYPE_ASSERT)\n");
+    assertion2 = sb_ast_create(SB_AST_TYPE_ASSERT);
+    if (assertion2 == NULL) {
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
+    }
+    assertion2 = sb_ast_assert_set_data(assertion2, 23, BPF_B, IPPROTO_UDP, BPF_JNE, ret);
+    if (assertion2 == NULL) {
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
+    }
+
+    printf("test_ast: sb_ast_create(SB_AST_TYPE_ASSERT)\n");
     assertion = sb_ast_create(SB_AST_TYPE_ASSERT);
     if (assertion == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
-    assertion = sb_ast_assert_set_data(assertion, 12, BPF_H, ETH_P_ARP, ret);
+    assertion = sb_ast_assert_set_data(assertion, 12, BPF_H, ETH_P_ARP, BPF_JNE, assertion2);
     if (assertion == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
@@ -71,7 +87,7 @@ int test_ast()
         goto cleanup;
     }
 
-    printf("test_ast: sb_graph_compile g=%p entry=%p\n", g, g->v->next);
+    printf("test_ast: sb_graph_compile\n");
     b = sb_graph_compile(g, g->v->next, NULL);
     if (b == NULL) {
         err = true;

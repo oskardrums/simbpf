@@ -29,13 +29,14 @@ struct sb_ast_s * sb_ast_function_set_data(struct sb_ast_s * ast, struct sb_ast_
     return ast;
 }
 
-struct sb_ast_s * sb_ast_assert_set_data(struct sb_ast_s * ast, size_t offset, size_t size, uint64_t value, struct sb_ast_s * tail)
+struct sb_ast_s * sb_ast_assert_set_data(struct sb_ast_s * ast, size_t offset, size_t size, uint64_t value, uint8_t op, struct sb_ast_s * tail)
 {
     assert(ast->type == SB_AST_TYPE_ASSERT);
     ast->data.ast_assert.offset = offset;
     ast->data.ast_assert.size = size;
     ast->data.ast_assert.value = value;
     ast->data.ast_assert.tail = tail;
+    ast->data.ast_assert.op = op;
     return ast;
 }
 
@@ -149,7 +150,7 @@ struct sb_vertex_s * sb_ast__emit_assert(struct sb_ast_s * ast, struct sb_graph_
         BPF_JMP_REG(BPF_JGT, BPF_REG_3, BPF_REG_9, 0),
     };
     struct bpf_insn body_to_ret_i[] = {
-        BPF_JMP_IMM(BPF_JGT, BPF_REG_3, ast->data.ast_assert.value, 0),
+        BPF_JMP_IMM(ast->data.ast_assert.op, BPF_REG_3, ast->data.ast_assert.value, 0),
     };
     if ((bounds_check_v = sb_graph_vertex_with_insns(g, bounds_check_i, array_sizeof(bounds_check_i))) == NULL) {
         err = true;

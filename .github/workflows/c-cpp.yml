@@ -14,9 +14,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: configure
+      run: autoconf
       run: ./configure
     - name: make
       run: make
     - name: make check
-      run: make check
+      run: sudo make check
 
