@@ -65,7 +65,7 @@ int test_ast()
     }
 
     printf("test_ast: sb_graph_compile g=%p entry=%p\n", g, g->v->next);
-    b = sb_graph_compile(g, g->v->next);
+    b = sb_graph_compile(g, g->v->next, NULL);
     if (b == NULL) {
         err = true;
         goto cleanup;
@@ -87,8 +87,13 @@ int test_ast()
         goto cleanup;
     }
 
-
     free(b);
+
+    printf("test_ast: bpf_set_link_xdp_fd second time arround\n");
+    if (bpf_set_link_xdp_fd(1, -1, 0) < 0) {
+        err = true;
+        goto cleanup;
+    }
 
     printf("test_ast: sb_graph_destroy\n");
     sb_graph_destroy(g);

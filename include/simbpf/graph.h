@@ -35,5 +35,5 @@ struct sb_edge_s * sb_graph_edges_from(struct sb_graph_s * g, struct sb_vertex_s
 struct sb_edge_s * sb_graph_edges_from_r(struct sb_graph_s * g, struct sb_vertex_s * src, struct sb_edge_s * r) __attribute__((nonnull(1, 2)));
 
 
-struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s * entry) __attribute__((nonnull(1,2)));
+struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s * entry, struct sb_bpf_cc_s *) __attribute__((nonnull(1,2)));
 #endif

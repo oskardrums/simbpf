@@ -1,6 +1,7 @@
 #ifndef SIMBPF_BPF_H
 #define SIMBPF_BPF_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <linux/bpf.h>
 #include <linux/filter.h>
@@ -17,6 +18,7 @@ struct sb_bpf_baton_s
 {
     size_t addr;
     size_t len;
+    bool complete;
     struct bpf_insn insns[];
 };
 

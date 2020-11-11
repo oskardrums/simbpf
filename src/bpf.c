@@ -16,7 +16,9 @@ struct sb_bpf_cc_s * sb_bpf__concat(struct sb_bpf_cc_s * cc, struct sb_bpf_cc_s 
             }
         }
         memcpy(&(cc->insns[cc->current]), other->insns, other->current*sizeof(other->insns[0]));
+        printf("updating current %lu + %lu = ", cc->current, other->current);
         cc->current += other->current;
+        printf("%lu\n", cc->current);
     }
     return cc;
 }
@@ -34,7 +36,13 @@ struct sb_bpf_cc_s * sb_bpf__append(struct sb_bpf_cc_s * cc, struct sb_bpf_baton
             }
         }
         memcpy(&(cc->insns[cc->current]), baton->insns, baton->len*sizeof(baton->insns[0]));
+        printf("updating current %lu + %lu = ", cc->current, baton->len);
         cc->current += baton->len;
+        printf("%lu\n", cc->current);
+        for (size_t i = 0; i < baton->len; ++i) {
+            struct bpf_insn o = baton->insns[i];
+            printf("%lu: 0x%02x, %u, %u, %d, %d\n", cc->current - 1, o.code, o.dst_reg, o.src_reg, o.off, o.imm);
+        }
     }
     return cc;
 }

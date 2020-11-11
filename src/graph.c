@@ -127,10 +127,8 @@ void sb_graph_destroy(struct sb_graph_s * g)
     free(g);
 }
 
-struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s * entry)
+struct sb_bpf_cc_s * sb_bpf_cc_create()
 {
-    struct sb_edge_s * e = NULL;
-    struct sb_bpf_baton_s * entry_baton = entry->weight;
     struct sb_bpf_cc_s * cc = (typeof(cc))malloc(sizeof(*cc) + sizeof(cc->insns[0]) * SB_GRAPH_INITIAL_CAPACITY);
     if (cc == NULL) {
         perror("malloc");
@@ -138,7 +136,34 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
     }
     memset(cc, 0, sizeof(*cc) + sizeof(cc->insns[0]) * SB_GRAPH_INITIAL_CAPACITY);
     cc->capacity = SB_GRAPH_INITIAL_CAPACITY;
+    return cc;
+}
 
+static long depth = 0;
+
+struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s * entry, struct sb_bpf_cc_s * cc)
+{
+    struct sb_edge_s * e = NULL;
+    struct sb_bpf_baton_s * entry_baton = entry->weight;
+
+    printf("sb_graph_compile: entering depth=%ld\n", depth);
+
+    if (entry_baton->complete) {
+        printf("been here done that\n");
+        return cc;
+    }
+
+    if (cc == NULL) {
+        if ((cc = sb_bpf_cc_create()) == NULL) {
+            perror("sb_graph_compile: can't create compiler context: malloc failed");
+            return NULL;
+        }
+        depth = 0;
+    } else {
+        ++depth;
+    }
+
+    printf("setting baton->addr = %lu (was %lu)\n", cc->current, entry_baton->addr);
     entry_baton->addr = cc->current;
     cc = sb_bpf__append(cc, entry_baton);
     if (cc == NULL) {
@@ -147,42 +172,55 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
     }
 
     for (e = sb_graph_edges_from(g, entry); e != NULL; e = sb_graph_edges_from_r(g, entry, e)) {
-        struct sb_bpf_baton_s * dst_baton = e->dst->weight;
         struct sb_bpf_baton_s * e_baton = e->weight;
+            printf("edge loop1\n");
 
         e_baton->addr = cc->current;
-
-        if (dst_baton->addr != 0) {
-            e_baton->insns[0].off = dst_baton->addr - e_baton->addr;
-        }
-
-        cc = sb_bpf__append(cc, e->weight);
-        if (cc == NULL) {
+        if ((cc = sb_bpf__append(cc, e_baton)) == NULL) {
             perror("append");
             return NULL;
         }
     }
 
     for (e = sb_graph_edges_from(g, entry); e != NULL; e = sb_graph_edges_from_r(g, entry, e)) {
-        struct sb_bpf_cc_s * sub_cc = NULL;
+    //    struct sb_bpf_cc_s * sub_cc = NULL;
         struct sb_bpf_baton_s * e_baton = e->weight;
-        struct sb_bpf_baton_s * src_baton = e->src->weight;
+        struct sb_bpf_baton_s * dst_baton = e->dst->weight;
+            printf("edge loop2\n");
 
-        if (cc->insns[e_baton->addr].off == 0) {
-            cc->insns[e_baton->addr].off = cc->current - src_baton->addr - 2;
-            sub_cc = sb_graph_compile(g, e->dst);
-            if (sub_cc == NULL) {
+        if (dst_baton->complete) {
+            printf("THIS shit happend\n");
+        } else {
+            cc = sb_graph_compile(g, e->dst, cc);
+            if (cc == NULL) {
                 perror("compile");
                 return NULL;
             }
-            cc = sb_bpf__concat(cc, sub_cc);
-            free(sub_cc);
+        }
+        printf("that shit happend %lu->%lu (%d)\n", e_baton->addr, dst_baton->addr, e_baton->insns[0].off);
+        cc->insns[e_baton->addr].off = dst_baton->addr - e_baton->addr - 1;
+        e_baton->complete = true;
+        /*
+        if (!(e_baton->complete)) {
+            printf("that shit happend %lu->%lu\n", e_baton->addr, cc->current);
+            cc->insns[e_baton->addr].off = cc->current - e_baton->addr - 1;
+            e_baton->complete = true;
+            cc = sb_graph_compile(g, e->dst, cc);
             if (cc == NULL) {
-                perror("concat");
+                perror("compile");
                 return NULL;
             }
+  //          cc = sb_bpf__concat(cc, sub_cc);
+  //          free(sub_cc);
+  //          if (cc == NULL) {
+  //              perror("concat");
+  //              return NULL;
+  //          }
         }
+        */
     }
+
+    entry_baton->complete = true;
 
     return cc;
 }
