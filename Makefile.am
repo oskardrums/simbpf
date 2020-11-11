@@ -1,1 +1,1 @@
-SUBDIRS = src tst
+SUBDIRS = src test
