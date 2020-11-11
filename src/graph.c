@@ -71,6 +71,29 @@ struct sb_edge_s * sb_graph_edge(struct sb_graph_s * g, void * weight, struct sb
     return tail->next;
 }
 
+struct sb_edge_s * sb_graph_edges_to_except_r(struct sb_graph_s * g, struct sb_vertex_s * except, struct sb_vertex_s * dst, struct sb_edge_s * r)
+{
+    struct sb_edge_s * temp = NULL;
+
+    for (temp = (r ? r->next : g->e); temp != NULL; temp = temp->next) {
+        if (temp->src != except && temp->dst == dst) {
+            return temp;
+        }
+    }
+
+    return NULL;
+}
+
+struct sb_edge_s * sb_graph_edges_to_except(struct sb_graph_s * g, struct sb_vertex_s * except, struct sb_vertex_s * dst)
+{
+    return sb_graph_edges_to_except_r(g, except, dst, NULL);
+}
+
+struct sb_edge_s * sb_graph_edges_from_to(struct sb_graph_s * g, struct sb_vertex_s * src, struct sb_vertex_s * dst)
+{
+    return sb_graph_edges_from_to_r(g, src, dst, NULL);
+}
+
 struct sb_edge_s * sb_graph_edges_from_to_r(struct sb_graph_s * g, struct sb_vertex_s * src, struct sb_vertex_s * dst, struct sb_edge_s * r)
 {
     struct sb_edge_s * temp = NULL;
@@ -84,9 +107,22 @@ struct sb_edge_s * sb_graph_edges_from_to_r(struct sb_graph_s * g, struct sb_ver
     return NULL;
 }
 
-struct sb_edge_s * sb_graph_edges_from_to(struct sb_graph_s * g, struct sb_vertex_s * src, struct sb_vertex_s * dst)
+struct sb_edge_s * sb_graph_edges_to_r(struct sb_graph_s * g, struct sb_vertex_s * dst, struct sb_edge_s * r)
 {
-    return sb_graph_edges_from_to_r(g, src, dst, NULL);
+    struct sb_edge_s * temp = NULL;
+
+    for (temp = (r ? r->next : g->e); temp != NULL; temp = temp->next) {
+        if (temp->dst == dst) {
+            return temp;
+        }
+    }
+
+    return NULL;
+}
+
+struct sb_edge_s * sb_graph_edges_to(struct sb_graph_s * g, struct sb_vertex_s * dst)
+{
+    return sb_graph_edges_to_r(g, dst, NULL);
 }
 
 struct sb_edge_s * sb_graph_edges_from_r(struct sb_graph_s * g, struct sb_vertex_s * src, struct sb_edge_s * r)
@@ -127,35 +163,24 @@ void sb_graph_destroy(struct sb_graph_s * g)
     free(g);
 }
 
-struct sb_bpf_cc_s * sb_bpf_cc_create()
-{
-    struct sb_bpf_cc_s * cc = (typeof(cc))malloc(sizeof(*cc) + sizeof(cc->insns[0]) * SB_GRAPH_INITIAL_CAPACITY);
-    if (cc == NULL) {
-        perror("malloc");
-        return NULL;
-    }
-    memset(cc, 0, sizeof(*cc) + sizeof(cc->insns[0]) * SB_GRAPH_INITIAL_CAPACITY);
-    cc->capacity = SB_GRAPH_INITIAL_CAPACITY;
-    return cc;
-}
-
 static long depth = 0;
 
 struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s * entry, struct sb_bpf_cc_s * cc)
 {
     struct sb_edge_s * e = NULL;
-    struct sb_bpf_baton_s * entry_baton = entry->weight;
+    struct sb_vw_s * entry_w = entry->weight;
+    struct sb_block_s * entry_b = entry_w->block;
 
     printf("sb_graph_compile: entering depth=%ld\n", depth);
 
-    if (entry_baton->complete) {
+    if (entry_w->set) {
         printf("been here done that\n");
         return cc;
     }
 
     if (cc == NULL) {
         if ((cc = sb_bpf_cc_create()) == NULL) {
-            perror("sb_graph_compile: can't create compiler context: malloc failed");
+            perror("sb_graph_compile: can't create compiler context");
             return NULL;
         }
         depth = 0;
@@ -163,64 +188,47 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
         ++depth;
     }
 
-    printf("setting baton->addr = %lu (was %lu)\n", cc->current, entry_baton->addr);
-    entry_baton->addr = cc->current;
-    cc = sb_bpf__append(cc, entry_baton);
+    printf("setting vw@%p->addr = %lu (was %lu)\n", entry_w, cc->current, entry_w->addr);
+    entry_w->addr = cc->current;
+    cc = sb_bpf_cc_push(cc, entry_b);
     if (cc == NULL) {
-        perror("append");
+        perror("push");
         return NULL;
     }
 
     for (e = sb_graph_edges_from(g, entry); e != NULL; e = sb_graph_edges_from_r(g, entry, e)) {
-        struct sb_bpf_baton_s * e_baton = e->weight;
-            printf("edge loop1\n");
-
-        e_baton->addr = cc->current;
-        if ((cc = sb_bpf__append(cc, e_baton)) == NULL) {
-            perror("append");
+        struct sb_ew_s * ew = e->weight;
+        ew->addr = cc->current;
+        if ((cc = sb_bpf_cc_push(cc, ew->block)) == NULL) {
+            perror("push");
             return NULL;
         }
     }
 
+    entry_w->set = true;
+
     for (e = sb_graph_edges_from(g, entry); e != NULL; e = sb_graph_edges_from_r(g, entry, e)) {
-    //    struct sb_bpf_cc_s * sub_cc = NULL;
-        struct sb_bpf_baton_s * e_baton = e->weight;
-        struct sb_bpf_baton_s * dst_baton = e->dst->weight;
-            printf("edge loop2\n");
+        struct sb_ew_s * ew = e->weight;
+        struct sb_vw_s * dst_w = e->dst->weight;
+        struct sb_edge_s * coe = NULL;
 
-        if (dst_baton->complete) {
-            printf("THIS shit happend\n");
-        } else {
+        if (!(dst_w->set)) {
+            for (coe = sb_graph_edges_to_except(g, e->src, e->dst); coe != NULL; coe = sb_graph_edges_to_except_r(g, e->src, e->dst, coe)) {
+                cc = sb_graph_compile(g, coe->src, cc);
+                if (cc == NULL) {
+                    perror("compile");
+                    return NULL;
+                }
+            }
             cc = sb_graph_compile(g, e->dst, cc);
             if (cc == NULL) {
                 perror("compile");
                 return NULL;
             }
         }
-        printf("that shit happend %lu->%lu (%d)\n", e_baton->addr, dst_baton->addr, e_baton->insns[0].off);
-        cc->insns[e_baton->addr].off = dst_baton->addr - e_baton->addr - 1;
-        e_baton->complete = true;
-        /*
-        if (!(e_baton->complete)) {
-            printf("that shit happend %lu->%lu\n", e_baton->addr, cc->current);
-            cc->insns[e_baton->addr].off = cc->current - e_baton->addr - 1;
-            e_baton->complete = true;
-            cc = sb_graph_compile(g, e->dst, cc);
-            if (cc == NULL) {
-                perror("compile");
-                return NULL;
-            }
-  //          cc = sb_bpf__concat(cc, sub_cc);
-  //          free(sub_cc);
-  //          if (cc == NULL) {
-  //              perror("concat");
-  //              return NULL;
-  //          }
-        }
-        */
+        printf("fixing jump %lu->%lu (%d)\n", ew->addr, dst_w->addr, cc->insns[ew->addr].off);
+        cc->insns[ew->addr].off = dst_w->addr - ew->addr - 1;
     }
-
-    entry_baton->complete = true;
 
     return cc;
 }

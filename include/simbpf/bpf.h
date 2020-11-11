@@ -8,24 +8,30 @@
 
 #include "bpf_insn.h"
 
+#define SB_INSNS_INITIAL_CAPACITY 1024
+
 struct sb_bpf_cc_s {
     size_t current;
     size_t capacity;
     struct bpf_insn insns[];
 };
 
-struct sb_bpf_baton_s
+struct sb_block_s
 {
-    size_t addr;
     size_t len;
-    bool complete;
     struct bpf_insn insns[];
 };
 
-struct sb_bpf_cc_s * sb_bpf__append(struct sb_bpf_cc_s * cc, struct sb_bpf_baton_s * baton);
+struct sb_bpf_cc_s * sb_bpf_cc_create(void);
+
+void sb_block_destroy(struct sb_block_s *);
+
+struct sb_bpf_cc_s * sb_bpf_cc_push(struct sb_bpf_cc_s * cc, struct sb_block_s *);
+
 struct sb_bpf_cc_s * sb_bpf__concat(struct sb_bpf_cc_s * cc, struct sb_bpf_cc_s * other);
 
 void sb_bpf_cc_dump(struct sb_bpf_cc_s *);
 
-struct sb_bpf_baton_s * sb_bpf_baton_create(size_t);
+struct sb_block_s * sb_block_create(struct bpf_insn *, size_t);
+
 #endif

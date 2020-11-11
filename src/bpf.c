@@ -3,31 +3,44 @@
 #include <string.h>
 #include "simbpf/bpf.h"
 
-struct sb_bpf_cc_s * sb_bpf__concat(struct sb_bpf_cc_s * cc, struct sb_bpf_cc_s * other)
+struct sb_block_s * sb_block_create(struct bpf_insn * p, size_t n)
 {
-    size_t capacity = cc->capacity;
-    if (other != NULL) {
-        while (other->current > (cc->capacity - cc->current)) capacity <<= 1;
-        if (capacity > cc->capacity) {
-            cc = (typeof(cc))realloc(cc, sizeof(*cc) + sizeof(cc->insns[0]) * capacity);
-            if (cc == NULL) {
-                perror("realloc");
-                return NULL;
-            }
-        }
-        memcpy(&(cc->insns[cc->current]), other->insns, other->current*sizeof(other->insns[0]));
-        printf("updating current %lu + %lu = ", cc->current, other->current);
-        cc->current += other->current;
-        printf("%lu\n", cc->current);
+    struct sb_block_s * b = (typeof(b))malloc(sizeof(*b) + sizeof(b->insns[0]) * n);
+    if (b == NULL) {
+        return NULL;
     }
+    
+    memset(b->insns, 0, sizeof(*b) + sizeof(b->insns[0]) * n);
+    b->len = n;
+    memcpy(b->insns, p, sizeof(b->insns[0]) * n);
+
+    return b;
+}
+
+void sb_block_destroy(struct sb_block_s * b)
+{
+    if (b != NULL) {
+        free(b);
+    }
+}
+
+struct sb_bpf_cc_s * sb_bpf_cc_create()
+{
+    struct sb_bpf_cc_s * cc = (typeof(cc))malloc(sizeof(*cc) + sizeof(cc->insns[0]) * SB_INSNS_INITIAL_CAPACITY);
+    if (cc == NULL) {
+        perror("sb_bpf_cc_create: malloc failed");
+        return NULL;
+    }
+    memset(cc, 0, sizeof(*cc) + sizeof(cc->insns[0]) * SB_INSNS_INITIAL_CAPACITY);
+    cc->capacity = SB_INSNS_INITIAL_CAPACITY;
     return cc;
 }
 
-struct sb_bpf_cc_s * sb_bpf__append(struct sb_bpf_cc_s * cc, struct sb_bpf_baton_s * baton)
+struct sb_bpf_cc_s * sb_bpf_cc_push(struct sb_bpf_cc_s * cc, struct sb_block_s * block)
 {
     size_t capacity = cc->capacity;
-    if (baton != NULL) {
-        while (baton->len > (cc->capacity - cc->current)) capacity <<= 1;
+    if (block != NULL) {
+        while (block->len > (cc->capacity - cc->current)) capacity <<= 1;
         if (capacity > cc->capacity) {
             cc = (typeof(cc))realloc(cc, sizeof(*cc) + sizeof(cc->insns[0]) * capacity);
             if (cc == NULL) {
@@ -35,12 +48,12 @@ struct sb_bpf_cc_s * sb_bpf__append(struct sb_bpf_cc_s * cc, struct sb_bpf_baton
                 return NULL;
             }
         }
-        memcpy(&(cc->insns[cc->current]), baton->insns, baton->len*sizeof(baton->insns[0]));
-        printf("updating current %lu + %lu = ", cc->current, baton->len);
-        cc->current += baton->len;
+        memcpy(&(cc->insns[cc->current]), block->insns, block->len*sizeof(block->insns[0]));
+        printf("updating current %lu + %lu = ", cc->current, block->len);
+        cc->current += block->len;
         printf("%lu\n", cc->current);
-        for (size_t i = 0; i < baton->len; ++i) {
-            struct bpf_insn o = baton->insns[i];
+        for (size_t i = 0; i < block->len; ++i) {
+            struct bpf_insn o = block->insns[i];
             printf("%lu: 0x%02x, %u, %u, %d, %d\n", cc->current - 1, o.code, o.dst_reg, o.src_reg, o.off, o.imm);
         }
     }
@@ -54,13 +67,4 @@ void sb_bpf_cc_dump(struct sb_bpf_cc_s * cc) {
         struct bpf_insn o = cc->insns[i];
         printf("%lu: 0x%02x, %u, %u, %d, %d\n", i, o.code, o.dst_reg, o.src_reg, o.off, o.imm);
     }
-}
-
-struct sb_bpf_baton_s * sb_bpf_baton_create(size_t len) {
-    struct sb_bpf_baton_s * baton = (typeof(baton))malloc(sizeof(*baton) + sizeof(baton->insns[0]) * len);
-    if (baton != NULL) {
-        memset(baton, 0, sizeof(*baton) + sizeof(baton->insns[0]) * len);
-        baton->len = len;
-    }
-    return baton;
 }
