@@ -20,6 +20,7 @@ include/config.h.in~
 include/stamp-h1
 .deps
 test-suite.log
+test-driver
 test_simbpf
 test_simbpf.log
 test_simbpf.trs
