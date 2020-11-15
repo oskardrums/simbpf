@@ -168,6 +168,12 @@ struct sb_vertex_s * sb_arm_emit(struct arm_s * a, struct sb_graph_s * g, struct
         BPF_JMP_REG(a->match->op, BPF_REG_X, BPF_REG_A, 0),
     };
 
+    if ((then_v = sb_expr_emit(a->expr, g, NULL, ret_v)) == NULL) {
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
+    }
+
     if (a->next) {
         if ((next_v = sb_arm_emit(a->next, g, fallthrough_v, ret_v)) == NULL) {
             err = true;
@@ -179,43 +185,49 @@ struct sb_vertex_s * sb_arm_emit(struct arm_s * a, struct sb_graph_s * g, struct
             printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
             goto cleanup;
         }
+        if (sb_graph_edge_with_insns(
+                        g,
+                        load_v,
+                        then_v,
+                        load_to_then_i,
+                        array_sizeof(load_to_then_i))
+                        == NULL)
+        {
+            err = true;
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            goto cleanup;
+        }
     } else {
-        struct sb_vertex_s * default_v = NULL;
-        if ((default_v = sb_graph_vertex_with_insns(g, NULL, 0)) == NULL) {
+        struct sb_vertex_s * patch_v = NULL;
+        if ((patch_v = sb_graph_vertex_with_insns(g, NULL, 0, NULL)) == NULL) {
             err = true;
             printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
             goto cleanup;
         }
-        if (sb_graph_edge_uncond(g, default_v, ret_v) == NULL) {
+        if (sb_graph_edge_with_insns(
+                        g,
+                        patch_v,
+                        then_v,
+                        load_to_then_i,
+                        array_sizeof(load_to_then_i))
+                        == NULL)
+        {
             err = true;
             printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
             goto cleanup;
         }
-        if ((load_v = sb_expr_emit(a->match->expr, g, default_v, ret_v)) == NULL) {
+        if (sb_graph_edge_uncond(g, patch_v, ret_v) == NULL) {
+            err = true;
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            goto cleanup;
+        }
+        if ((load_v = sb_expr_emit(a->match->expr, g, patch_v, ret_v)) == NULL) {
             err = true;
             printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
             goto cleanup;
         }
     }
 
-    if ((then_v = sb_expr_emit(a->expr, g, NULL, ret_v)) == NULL) {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
-
-    if (sb_graph_edge_with_insns(
-                    g,
-                    load_v,
-                    then_v,
-                    load_to_then_i, 
-                    array_sizeof(load_to_then_i))
-                    == NULL)
-    {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
 
 cleanup:
     if (err) {
@@ -234,7 +246,13 @@ struct sb_vertex_s * sb_expr_emit_test(struct expr_s * e, struct sb_graph_s * g,
         BPF_MOV64_REG(BPF_REG_X, BPF_REG_A),
     };
 
-    if ((store_v = sb_graph_vertex_with_insns(g, store_i, array_sizeof(store_i))) == NULL) {
+    if ((arm_v = sb_arm_emit(e->data.test.arms, g, fallthrough_v, ret_v)) == NULL) {
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
+    }
+
+    if ((store_v = sb_graph_vertex_with_insns(g, store_i, array_sizeof(store_i), arm_v)) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
@@ -246,18 +264,7 @@ struct sb_vertex_s * sb_expr_emit_test(struct expr_s * e, struct sb_graph_s * g,
         goto cleanup;
     }
 
-    if ((arm_v = sb_arm_emit(e->data.test.arms, g, fallthrough_v, ret_v)) == NULL) {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
-        
-    if (sb_graph_edge_fallthrough(g, store_v, arm_v) == NULL) {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
-    
+
 cleanup:
     if (err) {
         return NULL;
@@ -267,33 +274,27 @@ cleanup:
 
 struct sb_vertex_s * sb_expr_emit_const(struct expr_s * e, struct sb_graph_s * g, struct sb_vertex_s * fallthrough_v, struct sb_vertex_s * ret_v)
 {
+    (void)ret_v;
     bool err = false;
     struct sb_vertex_s * load_v = NULL;
     struct bpf_insn load_i[] = {
         BPF_MOV64_IMM(BPF_REG_A, e->data.value),
     };
 
-    if ((load_v = sb_graph_vertex_with_insns(g, load_i, array_sizeof(load_i))) == NULL) {
+    if ((load_v = sb_graph_vertex_with_insns(g, load_i, array_sizeof(load_i), fallthrough_v)) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
-    if (fallthrough_v) { 
-        if ((sb_graph_edge_fallthrough(g, load_v, fallthrough_v) == NULL)) {
+    if (fallthrough_v == NULL) {
+        if (sb_graph_edge_uncond(g, load_v, ret_v) == NULL) {
             err = true;
             printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
             goto cleanup;
         }
-    } else {
-        if ((sb_graph_edge_uncond(g, load_v, ret_v) == NULL)) {
-            err = true;
-            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-            goto cleanup;
-        }
-
     }
-    
+
 cleanup:
     if (err) {
         return NULL;
@@ -319,13 +320,13 @@ struct sb_vertex_s * sb_expr_emit_read(struct expr_s * e, struct sb_graph_s * g,
         BPF_LDX_MEM(bpf_size, BPF_REG_A, BPF_REG_8, e->data.value),
     };
 
-    if ((bounds_check_v = sb_graph_vertex_with_insns(g, bounds_check_i, array_sizeof(bounds_check_i))) == NULL) {
+    if ((body_v = sb_graph_vertex_with_insns(g, body_i, array_sizeof(body_i), fallthrough_v)) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
-    if ((body_v = sb_graph_vertex_with_insns(g, body_i, array_sizeof(body_i))) == NULL) {
+    if ((bounds_check_v = sb_graph_vertex_with_insns(g, bounds_check_i, array_sizeof(bounds_check_i), body_v)) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
@@ -339,18 +340,6 @@ struct sb_vertex_s * sb_expr_emit_read(struct expr_s * e, struct sb_graph_s * g,
                     array_sizeof(bounds_check_to_ret_i)
                     )) == NULL)
     {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
-
-    if (sb_graph_edge_fallthrough(g, bounds_check_v, body_v) == NULL) {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
-
-    if ((fallthrough_v) && (sb_graph_edge_fallthrough(g, body_v, fallthrough_v) == NULL)) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
@@ -410,13 +399,14 @@ struct sb_graph_s * sb_prog_compile(struct prog_s * p)
         goto cleanup;
     }
 
-    if ((prolog_v = sb_graph_vertex_with_insns(g, prolog_i, array_sizeof(prolog_i))) == NULL) {
+    if ((prolog_v = sb_graph_vertex_with_insns(g, prolog_i, array_sizeof(prolog_i), NULL)) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
     }
 
-    if ((epilog_v = sb_graph_vertex_with_insns(g, epilog_i, array_sizeof(epilog_i))) == NULL) {
+
+    if ((epilog_v = sb_graph_vertex_with_insns(g, epilog_i, array_sizeof(epilog_i), NULL)) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
@@ -428,11 +418,7 @@ struct sb_graph_s * sb_prog_compile(struct prog_s * p)
         goto cleanup;
     }
 
-    if ((sb_graph_edge_fallthrough(g, prolog_v, expr_v)) == NULL) {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
+    prolog_v->fallthrough = expr_v;
 
 cleanup:
     if (err) {
@@ -441,6 +427,5 @@ cleanup:
             g = NULL;
         }
     }
-
     return g;
 }

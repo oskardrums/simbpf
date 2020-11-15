@@ -87,7 +87,7 @@ struct sb_vw_s * sb_vw_create(struct bpf_insn * p, size_t n)
     return vw;
 }
 
-struct sb_vertex_s * sb_graph_vertex(struct sb_graph_s * g, struct sb_vw_s * weight) 
+struct sb_vertex_s * sb_graph_vertex(struct sb_graph_s * g, struct sb_vw_s * weight, struct sb_vertex_s * fallthrough_v) 
 {
     struct sb_vertex_s * temp = NULL;
     struct sb_vertex_s * tail = g->v;
@@ -101,6 +101,7 @@ struct sb_vertex_s * sb_graph_vertex(struct sb_graph_s * g, struct sb_vw_s * wei
     }
     memset(tail->next, 0, sizeof(*tail->next));
     tail->next->weight = weight;
+    tail->next->fallthrough = fallthrough_v;
     tail->next->next = NULL;
     return tail->next;
 }
@@ -222,7 +223,6 @@ void sb_graph_destroy(struct sb_graph_s * g)
 struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s * entry, struct sb_bpf_cc_s * cc)
 {
     struct sb_edge_s * e = NULL;
-    struct sb_vertex_s * fallthrough_v = NULL;
     struct sb_vw_s * entry_w = entry->weight;
     struct sb_block_s * entry_b = entry_w->block;
 
@@ -247,19 +247,15 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
     for (e = sb_graph_edges_from(g, entry); e != NULL; e = sb_graph_edges_from_r(g, entry, e)) {
         struct sb_ew_s * ew = e->weight;
         ew->addr = cc->current;
-        if (ew->block->len) {
-            if ((cc = sb_bpf_cc_push(cc, ew->block)) == NULL) {
-                perror("push");
-                return NULL;
-            }
-        } else {
-            fallthrough_v = e->dst;
+        if ((cc = sb_bpf_cc_push(cc, ew->block)) == NULL) {
+            perror("push");
+            return NULL;
         }
     }
 
     entry_w->set = true;
 
-    if (fallthrough_v && (cc = sb_graph_compile(g, fallthrough_v, cc)) == NULL) {
+    if (entry->fallthrough && (cc = sb_graph_compile(g, entry->fallthrough, cc)) == NULL) {
         perror("compile");
         return NULL;
     }
@@ -268,10 +264,6 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
         struct sb_ew_s * ew = e->weight;
         struct sb_vw_s * dst_w = e->dst->weight;
         struct sb_edge_s * coe = NULL;
-
-        if (e->dst == fallthrough_v) {
-            continue;
-        }
 
         if (!(dst_w->set)) {
             for (coe = sb_graph_edges_to_except(g, e->src, e->dst); coe != NULL; coe = sb_graph_edges_to_except_r(g, e->src, e->dst, coe)) {
@@ -297,7 +289,7 @@ struct sb_bpf_cc_s * sb_graph_compile(struct sb_graph_s * g, struct sb_vertex_s 
 }
 
 
-struct sb_vertex_s * sb_graph_vertex_with_insns(struct sb_graph_s * g, struct bpf_insn * p, size_t n)
+struct sb_vertex_s * sb_graph_vertex_with_insns(struct sb_graph_s * g, struct bpf_insn * p, size_t n, struct sb_vertex_s * ft)
 {
     struct sb_vertex_s * v = NULL;
     struct sb_vw_s * vw = NULL;
@@ -306,7 +298,7 @@ struct sb_vertex_s * sb_graph_vertex_with_insns(struct sb_graph_s * g, struct bp
         return NULL;
     }
 
-    if ((v = sb_graph_vertex(g, vw)) == NULL) {
+    if ((v = sb_graph_vertex(g, vw, ft)) == NULL) {
         sb_vw_destroy(vw);
         return NULL;
     }
@@ -333,6 +325,7 @@ struct sb_edge_s * sb_graph_edge_with_insns(struct sb_graph_s * g, struct sb_ver
 
 struct sb_edge_s * sb_graph_edge_fallthrough(struct sb_graph_s * g, struct sb_vertex_s * v1, struct sb_vertex_s * v2)
 {
+
     return sb_graph_edge_with_insns(g, v1, v2, NULL, 0);
 }
 
