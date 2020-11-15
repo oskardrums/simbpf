@@ -23,6 +23,8 @@ test-suite.log
 test_simbpf
 test_simbpf.log
 test_simbpf.trs
+test/tests.sh.log
+test/tests.sh.trs
 test_simbpf.sh.trs
 test_simbpf.sh.log
 *.o
