@@ -18,5 +18,5 @@ jobs:
     - name: make
       run: make
     - name: make check
-      run: sudo make check
+      run: make check < src/input.txt; echo "TESTLOG"; cat src/input.txt; cat test/test_simbpf.log
 

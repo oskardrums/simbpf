@@ -9,4 +9,6 @@
 #include "simbpf/bpf.h"
 #include "simbpf/ast.h"
 
+struct sb_bpf_cc_s * sb_parse_and_compile();
+
 #endif

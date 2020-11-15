@@ -5,6 +5,24 @@
 
 struct bpf_insn;
 
+/* ArgX, context and stack frame pointer register positions. Note,
+ * Arg1, Arg2, Arg3, etc are used as argument mappings of function
+ * calls in BPF_CALL instruction.
+ */
+#define BPF_REG_ARG1	BPF_REG_1
+#define BPF_REG_ARG2	BPF_REG_2
+#define BPF_REG_ARG3	BPF_REG_3
+#define BPF_REG_ARG4	BPF_REG_4
+#define BPF_REG_ARG5	BPF_REG_5
+#define BPF_REG_CTX	BPF_REG_6
+#define BPF_REG_FP	BPF_REG_10
+
+/* Additional register mappings for converted user programs. */
+#define BPF_REG_A	BPF_REG_0
+#define BPF_REG_X	BPF_REG_7
+#define BPF_REG_TMP	BPF_REG_2	/* scratch reg */
+#define BPF_REG_D	BPF_REG_8	/* data, callee-saved */
+#define BPF_REG_H	BPF_REG_9	/* hlen, callee-saved */
 /* ALU ops on registers, bpf_add|sub|...: dst_reg += src_reg */
 
 #define BPF_ALU64_REG(OP, DST, SRC)				\

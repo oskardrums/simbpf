@@ -27,3 +27,8 @@ test_simbpf.sh.trs
 test_simbpf.sh.log
 *.o
 src/simbpf
+src/grammar.c
+src/grammar.h
+src/lexicon.c
+ylwrap
+core
