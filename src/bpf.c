@@ -36,6 +36,13 @@ struct sb_bpf_cc_s * sb_bpf_cc_create()
     return cc;
 }
 
+void sb_bpf_cc_destroy(struct sb_bpf_cc_s * cc)
+{
+    if (cc != NULL) {
+        free(cc);
+    }
+}
+
 struct sb_bpf_cc_s * sb_bpf_cc_push(struct sb_bpf_cc_s * cc, struct sb_block_s * block)
 {
     size_t capacity = cc->capacity;

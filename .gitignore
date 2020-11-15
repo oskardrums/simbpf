@@ -33,5 +33,10 @@ src/simbpf
 src/grammar.c
 src/grammar.h
 src/lexicon.c
+src/lexicon.h
 ylwrap
 core
+test/simbpf_sample_input.sh.log
+test/simbpf_sample_input.sh.trs
+test/simbpf_valgrind.sh.log
+test/simbpf_valgrind.sh.trs

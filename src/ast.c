@@ -14,6 +14,52 @@ struct prog_s * sb_prog_create()
     return p;
 }
 
+void sb_expr_destroy(struct expr_s * e)
+{
+    if (e) {
+        switch (e->type) {
+            case EXPR_TYPE_CONST:
+            case EXPR_TYPE_READ_U8:
+            case EXPR_TYPE_READ_U16:
+                break;
+            case EXPR_TYPE_TEST:
+                sb_expr_destroy(e->data.test.expr);
+                sb_arm_destroy(e->data.test.arms);
+                break;
+            default:
+                printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+                break;
+        }
+        free(e);
+    }
+}
+
+void sb_match_destroy(struct match_s * m)
+{
+    if (m) {
+        sb_expr_destroy(m->expr);
+        free(m);
+    }
+}
+
+void sb_arm_destroy(struct arm_s * a)
+{
+    if (a) {
+        sb_match_destroy(a->match);
+        sb_expr_destroy(a->expr);
+        sb_arm_destroy(a->next);
+        free(a);
+    }
+}
+
+void sb_prog_destroy(struct prog_s * p)
+{
+    if (p) {
+        sb_expr_destroy(p->expr);
+        free(p);
+    }
+}
+
 struct prog_s * sb_prog(struct expr_s * expr)
 {
     struct prog_s * p = sb_prog_create();
@@ -171,27 +217,6 @@ struct sb_vertex_s * sb_arm_emit(struct arm_s * a, struct sb_graph_s * g, struct
         goto cleanup;
     }
 
-    /*
-    if (a->next) {
-        if ((next_v = sb_arm_emit(a->next, g, ret_v)) == NULL) {
-            err = true;
-            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-            goto cleanup;
-        }
-
-        if (sb_graph_edge_uncond(
-                        g,
-                        load_v,
-                        then_v)
-                        == NULL)
-        {
-            err = true;
-            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-            goto cleanup;
-        }
-    }
-    */
-
 cleanup:
     if (err) {
         return NULL;
@@ -227,14 +252,6 @@ struct sb_vertex_s * sb_expr_emit_test(struct expr_s * e, struct sb_graph_s * g,
         goto cleanup;
     }
         
-    /*
-    if (sb_graph_edge_uncond(g, expr_v, store_v) == NULL) {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
-    */
-
     if (sb_graph_edge_fallthrough(g, store_v, arm_v) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);

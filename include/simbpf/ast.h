@@ -48,6 +48,11 @@ struct arm_s  * sb_arm(struct match_s *, struct expr_s *);
 struct arm_s  * sb_arms(struct arm_s *, struct arm_s *);
 struct match_s* sb_match(size_t, struct expr_s *);
 
+void sb_expr_destroy(struct expr_s * e);
+void sb_match_destroy(struct match_s * m);
+void sb_arm_destroy(struct arm_s * a);
+void sb_prog_destroy(struct prog_s * p);
+
 struct sb_vertex_s * sb_arm_emit(struct arm_s * a, struct sb_graph_s * g, struct sb_vertex_s * fallthrough_v, struct sb_vertex_s * ret_v);
 struct sb_vertex_s * sb_expr_emit_test(struct expr_s * e, struct sb_graph_s * g, struct sb_vertex_s * fallthrough_v, struct sb_vertex_s * ret_v);
 struct sb_vertex_s * sb_expr_emit_const(struct expr_s * e, struct sb_graph_s * g, struct sb_vertex_s * fallthrough_v, struct sb_vertex_s * ret_v);

@@ -23,6 +23,7 @@ struct sb_block_s
 };
 
 struct sb_bpf_cc_s * sb_bpf_cc_create(void);
+void sb_bpf_cc_destroy(struct sb_bpf_cc_s *);
 
 void sb_block_destroy(struct sb_block_s *);
 

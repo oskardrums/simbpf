@@ -1,10 +1,14 @@
 %parse-param { struct prog_s ** res_p }
+%parse-param {void * scanner}
+%lex-param {void * scanner}
 
 %{
   #include <stdio.h>  /* For printf, etc. */
   #include "simbpf.h"
-  int yylex (void);
-  void yyerror (struct prog_s **, char const *);
+  #include "grammar.h"
+  #include "lexicon.h"
+  int yylex (YYSTYPE * yylval_param, void * scanner);
+  void yyerror (struct prog_s **, void * scanner, char const *);
 %}
 
 %union {
@@ -15,6 +19,7 @@
         struct match_s * match;
 }
 
+%define api.pure full
 %define lr.type ielr
 %expect 2
 
@@ -55,9 +60,10 @@ comp:     EQ                    { $$ = BPF_JEQ; }
 
 %%
 
-void yyerror (struct prog_s ** res_p, char const * s)
+void yyerror (struct prog_s ** res_p, void * scanner, char const * s)
 {
 (void) res_p;
+(void) scanner;
   fprintf (stderr, "%s\n", s);
 }
 
