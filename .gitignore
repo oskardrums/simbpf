@@ -22,12 +22,6 @@ include/stamp-h1
 test-suite.log
 test-driver
 test_simbpf
-test_simbpf.log
-test_simbpf.trs
-test/tests.sh.log
-test/tests.sh.trs
-test_simbpf.sh.trs
-test_simbpf.sh.log
 *.o
 src/simbpf
 src/grammar.c
@@ -36,7 +30,5 @@ src/lexicon.c
 src/lexicon.h
 ylwrap
 core
-test/simbpf_sample_input.sh.log
-test/simbpf_sample_input.sh.trs
-test/simbpf_valgrind.sh.log
-test/simbpf_valgrind.sh.trs
+test/*.sh.log
+test/*.sh.trs

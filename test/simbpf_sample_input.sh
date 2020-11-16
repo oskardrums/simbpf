@@ -1,2 +1,2 @@
 #!/bin/sh
-./test_simbpf < ../src/input.txt
+../src/simbpf < ../examples/drop.sb

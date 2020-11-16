@@ -9,6 +9,8 @@
 #include "simbpf/bpf.h"
 #include "simbpf/ast.h"
 
-struct sb_bpf_cc_s * sb_parse_and_compile();
+typedef void * sb_scanner_t;
+
+struct sb_bpf_cc_s * sb_parse_and_compile(char *);
 
 #endif
