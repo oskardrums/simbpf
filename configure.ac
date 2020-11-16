@@ -3,6 +3,7 @@ AC_INIT([simbpf], [0.1.0], [moskar.drummer@gmail.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/simbpf.c])
 AC_CONFIG_HEADERS([include/config.h])
+AC_USE_SYSTEM_EXTENSIONS
 
 # Checks for programs.
 AC_PROG_CC
@@ -16,17 +17,24 @@ AM_PROG_AR
 AC_CHECK_LIB([bpf], [bpf_load_program])
 
 # Checks for header files.
-AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h unistd.h])
+AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h unistd.h libintl.h malloc.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
 AC_TYPE_SIZE_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
+AC_TYPE_INT8_T
+AC_TYPE_INT16_T
+AC_TYPE_INT32_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
+AC_FUNC_ALLOCA
+AC_FUNC_STRNLEN
 AC_CHECK_FUNCS([memset strtoul])
 
 AC_CONFIG_FILES([

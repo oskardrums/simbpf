@@ -22,15 +22,48 @@ void print_help(char * argv0)
     fprintf(stderr, "usage: %s [OPTIONS]\n", argv0);
     fprintf(stderr, "\nOPTIONS:\n");
     fprintf(stderr, "  -c PATH: input file, if omitted read source code from stdin\n");
+    fprintf(stderr, "  -e CODE: verbatim source code to be taken as compilation input\n");
     fprintf(stderr, "  -o PATH: output file\n");
 #ifdef HAVE_LIBBPF
     fprintf(stderr, "  -i IFNAME: interface to bind program to, if omitted no binding occurs\n");
 #endif
 }
 
-int main(int argc, char ** argv) {
+FILE * input_from_path(char * path)
+{
+    FILE * f = fopen(path, "r");
+    if (f == NULL) {
+        perror("fopen");
+        return NULL;
+    }
+    return f;
+}
+
+FILE * input_from_string(char * str)
+{
+    size_t len = strlen(str);
+    FILE * f = fmemopen(NULL, len, "r+");
+    if (f == NULL) {
+        perror("fmemopen");
+        return NULL;
+    }
+    if (fwrite(str, 1, len, f) < len) {
+        perror("fwrite");
+        fclose(f);
+        return NULL;
+    }
+    if (fseek(f, 0, SEEK_SET) < 0) {
+        perror("fseek");
+        fclose(f);
+        return NULL;
+    }
+    return f;
+}
+
+int main(int argc, char ** argv)
+{
     bool err = false;
-    char * input_path = NULL;
+    FILE * input = NULL;
     char * output_path = NULL;
     size_t arglen = 0;
     struct sb_bpf_cc_s * b = NULL;
@@ -39,7 +72,7 @@ int main(int argc, char ** argv) {
     int ifindex = 0, prog_fd = -1;
 #endif
 
-    while ((opt = getopt(argc, argv, "c:o:i:")) != -1) {
+    while ((opt = getopt(argc, argv, "c:o:i:e:")) != -1) {
         switch (opt) {
 #ifdef HAVE_LIBBPF
             case 'i':
@@ -51,15 +84,21 @@ int main(int argc, char ** argv) {
                 }
                 break;
 #endif
-            case 'c':
-                arglen = strnlen(optarg, PATH_MAX);
-                input_path = (char *) malloc (arglen);
-                if (input_path == NULL) {
+            case 'e':
+                input = input_from_string(optarg);
+                if (input == NULL) {
                     err = true;
-                    perror("malloc");
+                    printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
                     goto cleanup;
                 }
-                memcpy(input_path, optarg, arglen);
+                break;
+            case 'c':
+                input = input_from_path(optarg);
+                if (input == NULL) {
+                    err = true;
+                    printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+                    goto cleanup;
+                }
                 break;
             case 'o':
                 arglen = strnlen(optarg, PATH_MAX);
@@ -86,7 +125,7 @@ int main(int argc, char ** argv) {
         goto cleanup;
     }
 
-    b = sb_parse_and_compile(input_path);
+    b = sb_parse_and_compile(input);
 
 #ifdef HAVE_LIBBPF
     if (ifindex > 0) {
@@ -110,8 +149,8 @@ int main(int argc, char ** argv) {
     }
 
 cleanup:
-    if (input_path != NULL) {
-        free(input_path);
+    if (input != NULL) {
+        fclose(input);
     }
     if (output_path != NULL) {
         free(output_path);

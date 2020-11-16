@@ -8,7 +8,8 @@
 #include "simbpf/graph.h"
 #include "simbpf/bpf.h"
 #include "simbpf/ast.h"
+#include <stdio.h>
 
-struct sb_bpf_cc_s * sb_parse_and_compile(char *);
+struct sb_bpf_cc_s * sb_parse_and_compile(FILE *);
 
 #endif

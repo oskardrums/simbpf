@@ -2,13 +2,13 @@
 ## Showcase:
 Source code is quite compact and intuitive:
 ```
-user@host:~/checkouts/simbpf/src$ cat ../examples/arp_or_udp.sb
+user@host:~/simbpf/src$ cat ../examples/arp_or_udp.sb
 u16@12: =0x0806 -> pass;
         =0x0800 -> u8@23: =17 -> pass.
  ```
  Generated eBPF code is quite efficient:
  ```
-user@host:~/checkouts/simbpf/src$ ./simbpf -c ../examples/arp_or_udp.sb 
+user@host:~/simbpf/src$ ./simbpf -c ../examples/arp_or_udp.sb 
 26/1024
 0:      0x61, 8, 1, 0, 0
 1:      0x61, 9, 1, 4, 0
@@ -39,7 +39,7 @@ user@host:~/checkouts/simbpf/src$ ./simbpf -c ../examples/arp_or_udp.sb
 ```
 Compilation times are quite fast:
 ```
-user@debra:~/checkouts/simbpf/src$ time ./simbpf -c ../examples/arp_or_udp.sb
+user@host:~/simbpf/src$ time ./simbpf -c ../examples/arp_or_udp.sb
 26/1024
 0:      0x61, 8, 1, 0, 0
 .

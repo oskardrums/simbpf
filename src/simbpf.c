@@ -3,19 +3,17 @@
 #include "lexicon.h"
 #include <assert.h>
 
-struct sb_bpf_cc_s * sb_parse_and_compile(char * path)
+struct sb_bpf_cc_s * sb_parse_and_compile(FILE * input)
 {
     yyscan_t scanner = NULL;
     struct sb_bpf_cc_s * b = NULL;
     struct prog_s * p = NULL;
     struct sb_graph_s * g = NULL;
-    FILE * source = NULL;
 
     yylex_init(&scanner);
 
-    if (path != NULL) {
-        assert((source = fopen(path, "r")) != NULL);
-        yyset_in(source, scanner);
+    if (input != NULL) {
+        yyset_in(input, scanner);
     }
 
     if (yyparse(&p, scanner) == 0) {
@@ -32,9 +30,6 @@ struct sb_bpf_cc_s * sb_parse_and_compile(char * path)
 
     yylex_destroy(scanner);
 
-    if (source != NULL) {
-        fclose(source);
-    }
     return b;
 }
 
