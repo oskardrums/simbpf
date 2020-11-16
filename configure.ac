@@ -8,6 +8,8 @@ AC_CONFIG_HEADERS([include/config.h])
 AC_PROG_CC
 AC_PROG_YACC
 AC_PROG_LEX
+AC_PROG_RANLIB
+AM_PROG_AR
 
 
 # Checks for libraries.

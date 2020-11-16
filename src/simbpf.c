@@ -5,7 +5,7 @@
 
 struct sb_bpf_cc_s * sb_parse_and_compile(char * path)
 {
-    sb_scanner_t scanner = NULL;
+    yyscan_t scanner = NULL;
     struct sb_bpf_cc_s * b = NULL;
     struct prog_s * p = NULL;
     struct sb_graph_s * g = NULL;

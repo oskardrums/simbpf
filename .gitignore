@@ -3,9 +3,12 @@ aclocal.m4
 compile
 depcomp
 install-sh
+ar-lib
 missing
 configure
 config.log
+config.guess
+config.sub
 config.status
 .dirstamp
 Makefile
@@ -24,6 +27,7 @@ test-driver
 test_simbpf
 *.o
 src/simbpf
+src/libsb.a
 src/grammar.c
 src/grammar.h
 src/lexicon.c
