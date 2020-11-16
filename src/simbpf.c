@@ -32,6 +32,9 @@ struct sb_bpf_cc_s * sb_parse_and_compile(char * path)
 
     yylex_destroy(scanner);
 
+    if (source != NULL) {
+        fclose(source);
+    }
     return b;
 }
 

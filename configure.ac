@@ -11,6 +11,7 @@ AC_PROG_LEX
 
 
 # Checks for libraries.
+AC_CHECK_LIB([bpf], [bpf_load_program])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h unistd.h])
