@@ -8,7 +8,7 @@
 
 #include "bpf_insn.h"
 
-#define SB_INSNS_INITIAL_CAPACITY 1024
+#define SB_INSNS_INITIAL_CAPACITY 64
 
 struct sb_bpf_cc_s {
     size_t current;

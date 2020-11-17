@@ -24,16 +24,21 @@ void sb_block_destroy(struct sb_block_s * b)
     }
 }
 
-struct sb_bpf_cc_s * sb_bpf_cc_create()
+struct sb_bpf_cc_s * sb_bpf_cc_with_capacity(size_t capacity)
 {
-    struct sb_bpf_cc_s * cc = (typeof(cc))malloc(sizeof(*cc) + sizeof(cc->insns[0]) * SB_INSNS_INITIAL_CAPACITY);
+    struct sb_bpf_cc_s * cc = (typeof(cc))malloc(sizeof(*cc) + sizeof(cc->insns[0]) * capacity);
     if (cc == NULL) {
-        perror("sb_bpf_cc_create: malloc failed");
+        perror("sb_bpf_cc_with_capacity: malloc failed");
         return NULL;
     }
-    memset(cc, 0, sizeof(*cc) + sizeof(cc->insns[0]) * SB_INSNS_INITIAL_CAPACITY);
-    cc->capacity = SB_INSNS_INITIAL_CAPACITY;
+    memset(cc, 0, sizeof(*cc) + sizeof(cc->insns[0]) * capacity);
+    cc->capacity = capacity;
     return cc;
+}
+
+struct sb_bpf_cc_s * sb_bpf_cc_create()
+{
+    return sb_bpf_cc_with_capacity(SB_INSNS_INITIAL_CAPACITY);
 }
 
 void sb_bpf_cc_destroy(struct sb_bpf_cc_s * cc)
@@ -47,13 +52,14 @@ struct sb_bpf_cc_s * sb_bpf_cc_push(struct sb_bpf_cc_s * cc, struct sb_block_s *
 {
     size_t capacity = cc->capacity;
     if (block != NULL) {
-        while (block->len > (cc->capacity - cc->current)) capacity <<= 1;
+        while (block->len >= (capacity - cc->current)) capacity <<= 1;
         if (capacity > cc->capacity) {
             cc = (typeof(cc))realloc(cc, sizeof(*cc) + sizeof(cc->insns[0]) * capacity);
             if (cc == NULL) {
                 perror("realloc");
                 return NULL;
             }
+            cc->capacity = capacity;
         }
         memcpy(&(cc->insns[cc->current]), block->insns, block->len*sizeof(block->insns[0]));
         cc->current += block->len;
