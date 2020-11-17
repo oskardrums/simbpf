@@ -25,6 +25,7 @@ void sb_expr_destroy(struct expr_s * e)
             case EXPR_TYPE_TEST:
                 sb_expr_destroy(e->data.test.expr);
                 sb_arm_destroy(e->data.test.arms);
+                sb_expr_destroy(e->data.test.tail);
                 break;
             default:
                 printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
@@ -104,12 +105,13 @@ struct expr_s * sb_expr_read_u16(size_t offset)
     }
     return e;
 }
-struct expr_s * sb_expr_test(struct expr_s * expr, struct arm_s * arms)
+struct expr_s * sb_expr_test(struct expr_s * expr, struct arm_s * arms, struct expr_s * tail)
 {
     struct expr_s * e = sb_expr_create(EXPR_TYPE_TEST);
     if (e != NULL) {
         e->data.test.expr = expr;
         e->data.test.arms = arms;
+        e->data.test.tail = tail;
     }
     return e;
 }
@@ -130,12 +132,15 @@ struct arm_s * sb_arm(struct match_s * match, struct expr_s * expr)
     }
     return a;
 }
-struct arm_s * sb_arms(struct arm_s * head, struct arm_s * tail)
+struct arm_s * sb_arms(struct arm_s * head, struct arm_s * new)
 {
+    new->next = head;
+    /*
     struct arm_s *b = NULL, * a = head;
     while ((b = a) && (a = a->next));
     b->next = tail;
-    return head;
+    */
+    return new;
 }
 
 struct match_s * sb_match_create()
@@ -157,102 +162,85 @@ struct match_s * sb_match(size_t op, struct expr_s * expr)
 }
 
 
-struct sb_vertex_s * sb_arm_emit(struct arm_s * a, struct sb_graph_s * g, struct sb_vertex_s * fallthrough_v, struct sb_vertex_s * ret_v)
-{
-    bool err = false;
-    struct sb_vertex_s * load_v = NULL;
-    struct sb_vertex_s * then_v = NULL;
-    struct sb_vertex_s * next_v = NULL;
-
-    struct bpf_insn load_to_then_i[] = {
-        BPF_JMP_REG(a->match->op, BPF_REG_X, BPF_REG_A, 0),
-    };
-
-    if ((then_v = sb_expr_emit(a->expr, g, NULL, ret_v)) == NULL) {
-        err = true;
-        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-        goto cleanup;
-    }
-
-    if (a->next) {
-        if ((next_v = sb_arm_emit(a->next, g, fallthrough_v, ret_v)) == NULL) {
-            err = true;
-            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-            goto cleanup;
-        }
-        if ((load_v = sb_expr_emit(a->match->expr, g, next_v, ret_v)) == NULL) {
-            err = true;
-            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-            goto cleanup;
-        }
-        if (sb_graph_edge_with_insns(
-                        g,
-                        load_v,
-                        then_v,
-                        load_to_then_i,
-                        array_sizeof(load_to_then_i))
-                        == NULL)
-        {
-            err = true;
-            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-            goto cleanup;
-        }
-    } else {
-        struct sb_vertex_s * patch_v = NULL;
-        if ((patch_v = sb_graph_vertex_with_insns(g, NULL, 0, NULL)) == NULL) {
-            err = true;
-            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-            goto cleanup;
-        }
-        if (sb_graph_edge_with_insns(
-                        g,
-                        patch_v,
-                        then_v,
-                        load_to_then_i,
-                        array_sizeof(load_to_then_i))
-                        == NULL)
-        {
-            err = true;
-            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-            goto cleanup;
-        }
-        if (sb_graph_edge_uncond(g, patch_v, ret_v) == NULL) {
-            err = true;
-            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-            goto cleanup;
-        }
-        if ((load_v = sb_expr_emit(a->match->expr, g, patch_v, ret_v)) == NULL) {
-            err = true;
-            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-            goto cleanup;
-        }
-    }
-
-
-cleanup:
-    if (err) {
-        return NULL;
-    }
-    return load_v;
-}
 struct sb_vertex_s * sb_expr_emit_test(struct expr_s * e, struct sb_graph_s * g, struct sb_vertex_s * fallthrough_v, struct sb_vertex_s * ret_v)
 {
     bool err = false;
     struct sb_vertex_s * expr_v = NULL;
     struct sb_vertex_s * store_v = NULL;
-    struct sb_vertex_s * arm_v = NULL;
+    struct arm_s * t = NULL;
+    struct sb_vertex_s * tail_v = NULL;
+    struct sb_vertex_s * then_v = NULL;
 
     struct bpf_insn store_i[] = {
         BPF_MOV64_REG(BPF_REG_X, BPF_REG_A),
     };
 
-    if ((arm_v = sb_arm_emit(e->data.test.arms, g, fallthrough_v, ret_v)) == NULL) {
+    struct bpf_insn load_to_then_i[] = {
+        BPF_JMP_REG(0, BPF_REG_X, BPF_REG_A, 0),
+    };
+
+    if ((then_v = sb_expr_emit(e->data.test.arms->expr, g, fallthrough_v, ret_v)) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
+
     }
 
-    if ((store_v = sb_graph_vertex_with_insns(g, store_i, array_sizeof(store_i), arm_v)) == NULL) {
+    if (fallthrough_v == NULL) {
+        if (sb_graph_edge_uncond(g, then_v, ret_v) == NULL) {
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            return NULL;
+        }
+    }
+
+    e->data.test.arms->then_v = then_v;
+    for (t = e->data.test.arms->next; t != NULL; t = t->next) {
+        if ((then_v = sb_expr_emit(t->expr, g, then_v, ret_v)) == NULL) {
+            err = true;
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            goto cleanup;
+        }
+        t->then_v = then_v;
+        if (sb_graph_edge_uncond(g, then_v, ret_v) == NULL) {
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            return NULL;
+        }
+    }
+
+    if (e->data.test.tail) {
+        if ((tail_v = sb_expr_emit(e->data.test.tail, g, then_v, ret_v)) == NULL) {
+            err = true;
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            goto cleanup;
+        }
+        if (sb_graph_edge_uncond(g, tail_v, ret_v) == NULL) {
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            return NULL;
+        }
+    }
+
+    for (t = e->data.test.arms; t != NULL; t = t->next) {
+        if ((tail_v = sb_expr_emit(t->match->expr, g, tail_v, ret_v)) == NULL) {
+            err = true;
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            goto cleanup;
+        }
+        load_to_then_i[0].code = BPF_JMP | BPF_OP(t->match->op) | BPF_X;
+        if (sb_graph_edge_with_insns(
+                        g,
+                        tail_v,
+                        t->then_v,
+                        load_to_then_i,
+                        array_sizeof(load_to_then_i))
+                        == NULL)
+        {
+            err = true;
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            goto cleanup;
+        }
+    }
+
+    if ((store_v = sb_graph_vertex_with_insns(g, store_i, array_sizeof(store_i), tail_v)) == NULL) {
         err = true;
         printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
         goto cleanup;
@@ -274,7 +262,6 @@ cleanup:
 
 struct sb_vertex_s * sb_expr_emit_const(struct expr_s * e, struct sb_graph_s * g, struct sb_vertex_s * fallthrough_v, struct sb_vertex_s * ret_v)
 {
-    (void)ret_v;
     bool err = false;
     struct sb_vertex_s * load_v = NULL;
     struct bpf_insn load_i[] = {
@@ -289,9 +276,8 @@ struct sb_vertex_s * sb_expr_emit_const(struct expr_s * e, struct sb_graph_s * g
 
     if (fallthrough_v == NULL) {
         if (sb_graph_edge_uncond(g, load_v, ret_v) == NULL) {
-            err = true;
             printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
-            goto cleanup;
+            return NULL;
         }
     }
 
@@ -345,6 +331,13 @@ struct sb_vertex_s * sb_expr_emit_read(struct expr_s * e, struct sb_graph_s * g,
         goto cleanup;
     }
 
+    if (fallthrough_v == NULL) {
+        if (sb_graph_edge_uncond(g, body_v, ret_v) == NULL) {
+            printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+            return NULL;
+        }
+    }
+
 cleanup:
     if (err) {
         return NULL;
@@ -354,24 +347,28 @@ cleanup:
 
 struct sb_vertex_s * sb_expr_emit(struct expr_s * e, struct sb_graph_s * g, struct sb_vertex_s * fallthrough_v, struct sb_vertex_s * ret_v)
 {
+    struct sb_vertex_s * expr_v = NULL;
+
     switch (e->type) {
         case EXPR_TYPE_CONST:
-            return sb_expr_emit_const(e, g, fallthrough_v, ret_v);
+            expr_v = sb_expr_emit_const(e, g, fallthrough_v, ret_v);
             break;
         case EXPR_TYPE_READ_U8:
-            return sb_expr_emit_read(e, g, fallthrough_v, ret_v, BPF_B);
+            expr_v = sb_expr_emit_read(e, g, fallthrough_v, ret_v, BPF_B);
             break;
         case EXPR_TYPE_READ_U16:
-            return sb_expr_emit_read(e, g, fallthrough_v, ret_v, BPF_H);
+            expr_v = sb_expr_emit_read(e, g, fallthrough_v, ret_v, BPF_H);
             break;
         case EXPR_TYPE_TEST:
-            return sb_expr_emit_test(e, g, fallthrough_v, ret_v);
+            expr_v = sb_expr_emit_test(e, g, fallthrough_v, ret_v);
             break;
         default:
             printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
             return NULL;
             break;
     }
+
+    return expr_v;
 }
 
 struct sb_graph_s * sb_prog_compile(struct prog_s * p)

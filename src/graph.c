@@ -5,29 +5,44 @@
 
 struct sb_graph_s * sb_graph_create()
 {
+    bool err = false;
+
     struct sb_graph_s * g = (typeof(g))malloc(sizeof(*g));
     if (g == NULL) {
-        perror("malloc");
-        return NULL;
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
     }
     memset(g, 0, sizeof(*g));
 
     g->v = (typeof(g->v))malloc(sizeof(*g->v));
     if (g->v == NULL) {
-        perror("malloc");
-        free(g);
-        return NULL;
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
     }
     memset(g->v, 0, sizeof(*g->v));
 
     g->e = (typeof(g->e))malloc(sizeof(*g->e));
     if (g->e == NULL) {
-        perror("malloc");
-        free(g);
-        return NULL;
+        err = true;
+        printf("err at %s:%s:%u\n", __FILE__,  __FUNCTION__, __LINE__);
+        goto cleanup;
     }
     memset(g->e, 0, sizeof(*g->e));
 
+cleanup:
+    if (err) {
+        if (g != NULL) {
+            if (g->v != NULL) {
+                free(g->v);
+            }
+            if (g->e != NULL) {
+                free(g->e);
+            }
+        }
+        return NULL;
+    }
     return g;
 }
 

@@ -28,7 +28,7 @@ N		([0-9]+)
 {HEX}			{ yylval->n = strtoul(yytext + 2, NULL, 16); return N;}
 {N}			{ yylval->n = strtoul(yytext, NULL, 10); return N;}
 "@"                     { return AT;   }
-":"			{ return CASE; }
+"?"			{ return CASE; }
 ";"			{ return END;  }
 "."			{ return STOP; }
 "="			{ return EQ;   }

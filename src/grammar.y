@@ -21,7 +21,7 @@
 
 %define api.pure full
 %define lr.type ielr
-%expect 2
+%expect 3
 
 %token N 
 %token AT CASE THEN END STOP 
@@ -38,22 +38,23 @@
 
 %%
 
-prog:                           { YYABORT;                                }
-        | expr STOP             { $$ = sb_prog($1); *res_p = $$;      }
+prog:                           { YYABORT;                       }
+        | expr STOP             { $$ = sb_prog($1); *res_p = $$; }
         ;
-expr:     N                     { $$ = sb_expr_const($1);                 }
-        | DROP                  { $$ = sb_expr_const(XDP_DROP);           }
-        | PASS                  { $$ = sb_expr_const(XDP_PASS);           }
-        | U8  AT N              { $$ = sb_expr_read_u8($3);               }
-        | U16 AT N              { $$ = sb_expr_read_u16($3);              }
-        | expr CASE arms        { $$ = sb_expr_test($1, $3);              }
+expr:     N                     { $$ = sb_expr_const($1);        }
+        | DROP                  { $$ = sb_expr_const(XDP_DROP);  }
+        | PASS                  { $$ = sb_expr_const(XDP_PASS);  }
+        | U8  AT N              { $$ = sb_expr_read_u8($3);      }
+        | U16 AT N              { $$ = sb_expr_read_u16($3);     }
+        | expr CASE arms        { $$ = sb_expr_test($1, $3, sb_expr_const(XDP_DROP)); }
+        | expr CASE arms END expr   { $$ = sb_expr_test($1, $3, $5); }
         ;
-arms:     arm                   { $$ = $1;                     }
-        | arms END arm          { $$ = sb_arms($1, $3);               }
+arms:     arm                   { $$ = $1;                       }
+        | arms END arm          { $$ = sb_arms($1, $3);          }
         ;
-arm:      match THEN expr       { $$ = sb_arm($1, $3);         }
+arm:      match THEN expr       { $$ = sb_arm($1, $3);           }
         ;
-match:    comp expr             { $$ = sb_match($1, $2);               }
+match:    comp expr             { $$ = sb_match($1, $2);         }
         ;
 comp:     EQ                    { $$ = BPF_JEQ; }
         ;
@@ -64,6 +65,6 @@ void yyerror (struct prog_s ** res_p, void * scanner, char const * s)
 {
 (void) res_p;
 (void) scanner;
-  fprintf (stderr, "%s\n", s);
+  fprintf (stderr, "%s %s\n", s, yyget_text(scanner));
 }
 
