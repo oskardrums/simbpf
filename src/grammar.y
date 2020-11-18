@@ -64,7 +64,6 @@ comp:     EQ                    { $$ = BPF_JEQ; }
 void yyerror (struct prog_s ** res_p, void * scanner, char const * s)
 {
 (void) res_p;
-(void) scanner;
   fprintf (stderr, "%s %s\n", s, yyget_text(scanner));
 }
 
