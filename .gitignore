@@ -26,6 +26,8 @@ test-suite.log
 test-driver
 test_simbpf
 *.o
+*.gcda
+*.gcno
 src/simbpf
 src/libsb.a
 src/grammar.c

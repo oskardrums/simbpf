@@ -146,6 +146,8 @@ int main(int argc, char ** argv)
     if (b != NULL) {
         sb_bpf_cc_dump(b);
         sb_bpf_cc_destroy(b);
+    } else {
+        err = true;
     }
 
 cleanup:
